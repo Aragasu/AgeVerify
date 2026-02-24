@@ -1149,43 +1149,70 @@
   // TOTP 2FA
   // ═══════════════════════════════════════════════════════════════════════════
   function b32decode(s) {
-    const a='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    s=s.toUpperCase().replace(/=+$/,'');
-    let bits=0,val=0;const out=[];
-    for(const c of s){const i=a.indexOf(c);if(i===-1)continue;val=(val<<5)|i;bits+=5;if(bits>=8){bits-=8;out.push((val>>>bits)&0xff);}}
+    const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    s = s.toUpperCase().replace(/[\s=]/g, '');
+    let bits = 0, val = 0;
+    const out = [];
+    for (const c of s) {
+      const i = a.indexOf(c);
+      if (i === -1) continue;
+      val = (val << 5) | i;
+      bits += 5;
+      if (bits >= 8) { bits -= 8; out.push((val >>> bits) & 0xff); }
+    }
     return new Uint8Array(out);
   }
-  async function hotp(secret,counter){
-    const key=await crypto.subtle.importKey('raw',secret,{name:'HMAC',hash:'SHA-1'},false,['sign']);
-    const msg=new DataView(new ArrayBuffer(8));
-    msg.setUint32(0,Math.floor(counter/2**32));msg.setUint32(4,counter>>>0);
-    const sig=new Uint8Array(await crypto.subtle.sign('HMAC',key,msg.buffer));
-    const o=sig[19]&0xf;
-    return(((sig[o]&0x7f)<<24|sig[o+1]<<16|sig[o+2]<<8|sig[o+3])%1e6).toString().padStart(6,'0');
+
+  async function hotp(secret, counter) {
+    const key = await crypto.subtle.importKey(
+      'raw', secret, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+    );
+    // Encode counter as big-endian 8-byte buffer
+    const buf = new ArrayBuffer(8);
+    const view = new DataView(buf);
+    // counter is always < 2^32 for decades, so high word is 0
+    view.setUint32(0, 0, false);
+    view.setUint32(4, counter >>> 0, false);
+    const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, buf));
+    const offset = sig[19] & 0x0f;
+    // Use integer arithmetic — avoid float precision issues with %1e6
+    const code = (
+      ((sig[offset]   & 0x7f) * 16777216) +  // << 24
+      ( sig[offset+1]          * 65536)     +  // << 16
+      ( sig[offset+2]          * 256)        +  // << 8
+      ( sig[offset+3])
+    ) % 1000000;
+    return code.toString().padStart(6, '0');
   }
+
   async function validTOTPCodes() {
-    const sec=b32decode((window.SITE_CONFIG?.totpSecret||window._cfg?.TOTP_SECRET)||'JBSWY3DPEHPK3PXP');
-    const t=Math.floor(Date.now()/1000/30);
-    return Promise.all([t-1,t,t+1].map(w=>hotp(sec,w)));
+    const secret = (window.SITE_CONFIG?.totpSecret || window._cfg?.TOTP_SECRET || 'JBSWY3DPEHPK3PXP');
+    const sec = b32decode(secret);
+    const t = Math.floor(Date.now() / 1000 / 30);
+    // Check current window and ±1 for clock skew
+    const codes = await Promise.all([t - 1, t, t + 1].map(w => hotp(sec, w)));
+    console.log('[TOTP] secret:', secret, '| t:', t, '| valid codes:', codes);
+    return codes;
   }
 
   async function verifyTOTP() {
-    const boxes=[...document.querySelectorAll('.otp-b')];
-    const entered=boxes.map(b=>b.value).join('');
-    if(entered.length<6){shakeOTP();return;}
-    document.getElementById('otp-err').style.display='none';
-    const valid=await validTOTPCodes();
-    if(valid.includes(entered)){
-      boxes.forEach(b=>{b.style.borderColor='var(--green)';b.style.boxShadow='0 0 0 3px rgba(34,197,94,.15)';});
-      setTimeout(()=>{
+    const boxes = [...document.querySelectorAll('.otp-b')];
+    const entered = boxes.map(b => b.value).join('');
+    if (entered.length < 6) { shakeOTP(); return; }
+    document.getElementById('otp-err').style.display = 'none';
+    const valid = await validTOTPCodes();
+    console.log('[TOTP] entered:', entered, '| match:', valid.includes(entered));
+    if (valid.includes(entered)) {
+      boxes.forEach(b => { b.style.borderColor = 'var(--green)'; b.style.boxShadow = '0 0 0 3px rgba(34,197,94,.15)'; });
+      setTimeout(() => {
         showPage('admin');
         loadOrders();
         checkLockdownStatus();
-      },500);
+      }, 500);
     } else {
       shakeOTP();
-      document.getElementById('otp-err').style.display='block';
-      boxes.forEach(b=>b.value='');
+      document.getElementById('otp-err').style.display = 'block';
+      boxes.forEach(b => b.value = '');
       boxes[0].focus();
     }
   }
