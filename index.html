@@ -536,7 +536,7 @@
     </div>
   </section>
 
-  <footer>© 2026 AgeVerify — Roblox Age Estimation Service</footer>
+  <footer>© 2024 AgeVerify — Roblox Age Estimation Service</footer>
 </div>
 
 <!-- ═══════════════════ PURCHASE FLOW ═══════════════════ -->
@@ -867,11 +867,16 @@
     emailjs.init({ publicKey: emailjsConfig.publicKey });
   }
 
-  // ── Boot ──────────────────────────────────────────────────────────────────
-  window.addEventListener('load', async () => {
-    // Check admin param
+  // Signal that config is ready — boot() in the regular script listens for this
+  window.dispatchEvent(new CustomEvent('cfg-ready'));
+</script>
+
+<script>
+  // ── Boot — runs after module signals cfg-ready ─────────────────────────────
+  function boot() {
     const params = new URLSearchParams(location.search);
-    if (params.has(window._cfg.ADMIN_PARAM)) {
+    const adminParam = (window._cfg && window._cfg.ADMIN_PARAM) || 'admin';
+    if (params.has(adminParam)) {
       document.querySelectorAll('.nav-link').forEach(l => l.style.display='none');
       showPage('admin-login');
       initOTPBoxes();
@@ -879,15 +884,19 @@
       initSetupQR();
       return;
     }
-
     // Normal boot — check lockdown
-    await checkLockdownBanner();
+    checkLockdownBanner();
+  }
+
+  // Module scripts run after the HTML is parsed but dispatch events synchronously,
+  // so cfg-ready always fires BEFORE this regular script's listeners attach.
+  // We use a flag + DOMContentLoaded to handle this reliably.
+  window.addEventListener('cfg-ready', () => { window._cfgReady = true; });
+  document.addEventListener('DOMContentLoaded', () => {
+    // Small delay lets the module script finish setting window._cfg
+    setTimeout(boot, 0);
   });
 
-  window.dispatchEvent(new Event('app-ready'));
-</script>
-
-<script>
   // ═══════════════════════════════════════════════════════════════════════════
   // GLOBAL STATE
   // ═══════════════════════════════════════════════════════════════════════════
