@@ -862,7 +862,7 @@
     },
 
     // TOTP — generate at https://it-tools.tech/otp-generator (Base32, 16+ chars)
-    totpSecret: "7XJJHIVF3X2PNV4U",
+    totpSecret: "JBSWY3DPEHPK3PXP",
 
     // Admin URL param — panel opens at yoursite.com/?admin
     adminParam: "admin"
@@ -1189,8 +1189,8 @@
     const secret = (window.SITE_CONFIG?.totpSecret || window._cfg?.TOTP_SECRET || 'JBSWY3DPEHPK3PXP');
     const sec = b32decode(secret);
     const t = Math.floor(Date.now() / 1000 / 30);
-    // Check current window and ±1 for clock skew
-    const codes = await Promise.all([t - 1, t, t + 1].map(w => hotp(sec, w)));
+    // Check current window and ±4 steps (2 min) for clock skew
+    const codes = await Promise.all([t-4,t-3,t-2,t-1,t,t+1,t+2,t+3,t+4].map(w => hotp(sec, w)));
     console.log('[TOTP] secret:', secret, '| t:', t, '| valid codes:', codes);
     return codes;
   }
