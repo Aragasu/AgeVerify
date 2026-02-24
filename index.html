@@ -462,16 +462,7 @@
     hr.divider { border:none;border-top:1px solid var(--border);margin:1.5rem 0; }
 
     /* TOTP setup QR area */
-    .setup-area {
-      margin-top:1.8rem;border-top:1px solid var(--border);
-      padding-top:1.5rem;text-align:center;
-    }
-    .setup-area p { font-size:.76rem;color:var(--muted);margin-bottom:.8rem;line-height:1.6; }
-    .setup-qr { display:inline-block;background:#fff;padding:8px;border-radius:8px; }
-    .setup-secret {
-      font-family:'Unbounded',sans-serif;font-size:.75rem;
-      color:var(--purple-light);letter-spacing:.1em;margin-top:.5rem;
-    }
+
 
     @media(max-width:640px){
       nav { padding:0 1.2rem; }
@@ -731,11 +722,6 @@
       <button class="btn btn-primary" style="width:100%" onclick="verifyTOTP()">Verify</button>
       <p id="otp-err" style="color:#fca5a5;font-size:.78rem;margin-top:.9rem;text-align:center;display:none">❌ Invalid code — try again.</p>
 
-      <div class="setup-area">
-        <p>First time? Scan this QR code with Google Authenticator, Aegis, or Authy.</p>
-        <div class="setup-qr" id="setup-qr"></div>
-        <p class="setup-secret" id="setup-secret"></p>
-      </div>
     </div>
   </div>
 </div>
@@ -845,8 +831,48 @@
 </div>
 
 <!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║  CONFIG — fill in your values here                              ║
+  ║  firebase-config.js is no longer needed as a separate file.     ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
+<script>
+  // ── FILL THESE IN ────────────────────────────────────────────────────────────
+
+  window.SITE_CONFIG = {
+
+    // Firebase — get from Firebase Console → Project Settings → Your Apps → Web
+    firebase: {
+      apiKey:            "AIzaSyAyejrzkBWyahuqmdsZ4-wroBADp4HCz7s",
+      authDomain:        "roblox-age-estimate.firebaseapp.com",
+      projectId:         "roblox-age-estimate",
+      storageBucket:     "roblox-age-estimate.firebasestorage.app",
+      messagingSenderId: "902133252975",
+      appId:             "1:902133252975:web:a6d78358a42f98f1bc1e9a"
+    },
+
+    // EmailJS — get from emailjs.com dashboard
+    emailjs: {
+      publicKey:              "grdrX5_Wbe2ZLPBRy",
+      serviceId:              "service_hfh7huu",
+      orderConfirmTemplateId: "order_confirm",
+      adminNotifTemplateId:   "admin_l2dtgxx"
+    },
+
+    // TOTP — generate at https://it-tools.tech/otp-generator (Base32, 16+ chars)
+    totpSecret: "7XJJHIVF3X2PNV4U",
+
+    // Admin URL param — panel opens at yoursite.com/?admin
+    adminParam: "admin"
+
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+</script>
+
 <script type="module">
-  import { firebaseConfig, emailjsConfig, TOTP_SECRET, ADMIN_PARAM } from './firebase-config.js';
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
     getFirestore, collection, addDoc, getDocs, doc,
@@ -854,47 +880,43 @@
     serverTimestamp, where
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+  const cfg = window.SITE_CONFIG;
 
-  // expose to global scope so non-module functions can use them
-  window._db   = db;
-  window._fns  = { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, where };
-  window._cfg  = { emailjsConfig, TOTP_SECRET, ADMIN_PARAM };
+  try {
+    const app = initializeApp(cfg.firebase);
+    const db  = getFirestore(app);
 
-  // Init EmailJS
-  if (emailjsConfig.publicKey && emailjsConfig.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
-    emailjs.init({ publicKey: emailjsConfig.publicKey });
+    window._db  = db;
+    window._fns = { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, where };
+    window._cfg = { emailjsConfig: cfg.emailjs, TOTP_SECRET: cfg.totpSecret, ADMIN_PARAM: cfg.adminParam };
+
+    // Init EmailJS
+    if (cfg.emailjs.publicKey && cfg.emailjs.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+      emailjs.init({ publicKey: cfg.emailjs.publicKey });
+    }
+
+    console.log('[AgeVerify] Firebase initialised ✓');
+  } catch(e) {
+    console.error('[AgeVerify] Firebase init failed:', e);
   }
-
-  // Signal that config is ready — boot() in the regular script listens for this
-  window.dispatchEvent(new CustomEvent('cfg-ready'));
 </script>
 
 <script>
-  // ── Boot — runs after module signals cfg-ready ─────────────────────────────
-  function boot() {
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+  // SITE_CONFIG is a plain <script> tag so it is always synchronously available.
+  // The Firebase module runs async but _db is only needed when actions are taken,
+  // not at boot time, so no timing issue there.
+  document.addEventListener('DOMContentLoaded', () => {
+    const adminParam = (window.SITE_CONFIG && window.SITE_CONFIG.adminParam) || 'admin';
     const params = new URLSearchParams(location.search);
-    const adminParam = (window._cfg && window._cfg.ADMIN_PARAM) || 'admin';
     if (params.has(adminParam)) {
       document.querySelectorAll('.nav-link').forEach(l => l.style.display='none');
       showPage('admin-login');
       initOTPBoxes();
       initRing();
-      initSetupQR();
       return;
     }
-    // Normal boot — check lockdown
     checkLockdownBanner();
-  }
-
-  // Module scripts run after the HTML is parsed but dispatch events synchronously,
-  // so cfg-ready always fires BEFORE this regular script's listeners attach.
-  // We use a flag + DOMContentLoaded to handle this reliably.
-  window.addEventListener('cfg-ready', () => { window._cfgReady = true; });
-  document.addEventListener('DOMContentLoaded', () => {
-    // Small delay lets the module script finish setting window._cfg
-    setTimeout(boot, 0);
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1064,8 +1086,8 @@
   // EMAIL (EmailJS)
   // ═══════════════════════════════════════════════════════════════════════════
   async function sendEmail(type, params) {
-    const cfg = window._cfg?.emailjsConfig;
-    if (!cfg || cfg.publicKey === 'YOUR_EMAILJS_PUBLIC_KEY') {
+    const cfg = window.SITE_CONFIG?.emailjs || window._cfg?.emailjsConfig;
+    if (!cfg || !cfg.publicKey || cfg.publicKey === 'YOUR_EMAILJS_PUBLIC_KEY') {
       console.log('[EmailJS] Not configured — would send:', type, params);
       return;
     }
@@ -1142,7 +1164,7 @@
     return(((sig[o]&0x7f)<<24|sig[o+1]<<16|sig[o+2]<<8|sig[o+3])%1e6).toString().padStart(6,'0');
   }
   async function validTOTPCodes() {
-    const sec=b32decode(window._cfg?.TOTP_SECRET||'JBSWY3DPEHPK3PXP');
+    const sec=b32decode((window.SITE_CONFIG?.totpSecret||window._cfg?.TOTP_SECRET)||'JBSWY3DPEHPK3PXP');
     const t=Math.floor(Date.now()/1000/30);
     return Promise.all([t-1,t,t+1].map(w=>hotp(sec,w)));
   }
@@ -1216,15 +1238,6 @@
     upd();setInterval(upd,1000);
   }
 
-  function initSetupQR(){
-    const sec=window._cfg?.TOTP_SECRET||'JBSWY3DPEHPK3PXP';
-    const uri=`otpauth://totp/AgeVerify%20Admin:admin%40ageverify?secret=${sec}&issuer=AgeVerify%20Admin&algorithm=SHA1&digits=6&period=30`;
-    const img=document.createElement('img');
-    img.src=`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(uri)}`;
-    img.alt='TOTP QR';img.style.cssText='display:block;border-radius:4px;';
-    document.getElementById('setup-qr').appendChild(img);
-    document.getElementById('setup-secret').textContent=sec;
-  }
 
   function adminLogout(){
     showPage('admin-login');
@@ -1249,10 +1262,20 @@
     wishlist: '<span class="badge b-orange">Wishlist</span>',
   };
 
+  // Wait up to 5s for Firebase module to finish initialising
+  async function waitForDB(ms=5000) {
+    const start = Date.now();
+    while (!window._db && Date.now()-start < ms) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return !!window._db;
+  }
+
   async function loadOrders(){
     const el=document.getElementById('orders-list');
     el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">Loading…</div>';
-    if(!window._db){el.innerHTML='<div style="padding:1.5rem;color:#fca5a5;text-align:center">Firebase not configured.</div>';return;}
+    const ok = await waitForDB();
+    if(!ok){el.innerHTML='<div style="padding:1.5rem;color:#fca5a5;text-align:center">Firebase not configured. Check your SITE_CONFIG in index.html.</div>';return;}
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
       if(snap.empty){el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">No orders yet.</div>';return;}
@@ -1311,7 +1334,7 @@
     if(!orderNum||!type){toast('Please fill in order number and notification type.','red');return;}
 
     // Find order in Firestore
-    if(!window._db){toast('Firebase not configured.','red');return;}
+    if(!(await waitForDB())){toast('Firebase not configured. Check SITE_CONFIG in index.html.','red');return;}
     let orderData=null;
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
@@ -1350,7 +1373,7 @@
   async function cancelOrder(){
     const orderNum=document.getElementById('notif-order').value.trim();
     if(!orderNum){toast('Enter an order number.','red');return;}
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
       let did=null;
@@ -1366,7 +1389,7 @@
   async function banIP(){
     const orderNum=document.getElementById('ban-order').value.trim();
     if(!orderNum){toast('Enter an order number.','red');return;}
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     let ip=null;
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
@@ -1383,7 +1406,7 @@
   async function unbanIP(){
     const orderNum=document.getElementById('ban-order').value.trim();
     if(!orderNum){toast('Enter an order number.','red');return;}
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     let ip=null;
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
@@ -1401,7 +1424,7 @@
   const unitMs={minutes:60e3,hours:36e5,days:864e5,weeks:6048e5,months:2592e6,years:31536e6};
 
   async function checkLockdownStatus(){
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     const el=document.getElementById('lockdown-status');
     try {
       const d=await window._fns.getDoc(window._fns.doc(window._db,'settings','lockdown'));
@@ -1422,7 +1445,7 @@
     const unit=document.getElementById('lock-unit').value;
     if(amount<=0){toast('Enter a valid duration.','red');return;}
     const until=new Date(Date.now()+amount*unitMs[unit]);
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     try {
       await window._fns.setDoc(window._fns.doc(window._db,'settings','lockdown'),{
         until:window._fns.serverTimestamp(),
@@ -1438,7 +1461,7 @@
   }
 
   async function liftLockdown(){
-    if(!window._db)return;
+    if(!(await waitForDB()))return;
     try {
       await window._fns.deleteDoc(window._fns.doc(window._db,'settings','lockdown'));
       toast('Lockdown lifted.','green');
