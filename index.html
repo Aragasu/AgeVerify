@@ -388,6 +388,26 @@
     .b-gray   { background:rgba(255,255,255,.07);color:var(--text2); }
     .chevron { color:var(--muted);font-size:.8rem;transition:transform .2s;margin-left:.5rem; }
     .chevron.open { transform:rotate(180deg); }
+    .btn-archive {
+      background:rgba(251,146,60,.1);color:#fdba74;
+      border:1px solid rgba(251,146,60,.25);
+      font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;
+      padding:.35rem .9rem;border-radius:6px;cursor:pointer;
+      transition:all .2s;white-space:nowrap;
+    }
+    .btn-archive:hover { background:rgba(251,146,60,.2);border-color:rgba(251,146,60,.45); }
+    .btn-unarchive {
+      background:rgba(155,93,229,.1);color:var(--purple-light);
+      border:1px solid rgba(155,93,229,.25);
+      font-family:'Unbounded',sans-serif;font-size:.6rem;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;
+      padding:.35rem .9rem;border-radius:6px;cursor:pointer;
+      transition:all .2s;white-space:nowrap;
+    }
+    .btn-unarchive:hover { background:rgba(155,93,229,.2);border-color:rgba(155,93,229,.45); }
+    .view-archive-btn.active { background:rgba(251,146,60,.15);color:#fdba74;border-color:rgba(251,146,60,.4); }
+    .archived-dim { opacity:.55; }
 
     .order-details {
       display:none;padding:1.2rem 1.4rem 1.4rem;
@@ -736,8 +756,10 @@
     <!-- Orders -->
     <div class="panel-section">
       <div class="panel-section-title">📋 Orders</div>
-      <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap">
+      <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center">
         <button class="btn btn-outline btn-sm" onclick="loadOrders()">↻ Refresh</button>
+        <button class="btn btn-outline btn-sm view-archive-btn" id="archive-toggle-btn" onclick="toggleArchiveView()">📦 Archive</button>
+        <span id="archive-view-label" style="font-size:.72rem;color:var(--muted);font-family:'Unbounded',sans-serif;letter-spacing:.06em;display:none">VIEWING ARCHIVE</span>
       </div>
       <div id="orders-list" class="orders-list">
         <div style="text-align:center;padding:2rem;color:var(--muted)">Loading orders…</div>
@@ -1057,7 +1079,7 @@
 
     // Send order confirmation email
     await sendEmail('order_confirm', {
-      to_email: G.email,
+      email: G.email,
       order_num: G.orderNum,
       age_group: G.ageGroup,
       payment_method: G.payment,
@@ -1119,9 +1141,14 @@
     };
 
     try {
-      await emailjs.send(cfg.serviceId, templateId, sendParams);
+      const result = await emailjs.send(cfg.serviceId, templateId, sendParams);
+      console.log('[EmailJS] sent ok:', result);
+      return true;
     } catch(e) {
-      console.error('EmailJS error:', e);
+      console.error('[EmailJS] send failed:', e);
+      const msg = e?.text || e?.message || JSON.stringify(e);
+      toast('❌ Email failed: ' + msg, 'red');
+      return false;
     }
   }
 
@@ -1298,6 +1325,36 @@
     return !!window._db;
   }
 
+  let _showingArchive = false;
+
+  function toggleArchiveView(){
+    _showingArchive = !_showingArchive;
+    const btn = document.getElementById('archive-toggle-btn');
+    const lbl = document.getElementById('archive-view-label');
+    btn.classList.toggle('active', _showingArchive);
+    btn.textContent = _showingArchive ? '📋 Active Orders' : '📦 Archive';
+    lbl.style.display = _showingArchive ? 'inline' : 'none';
+    loadOrders();
+  }
+
+  async function archiveOrder(docId, orderNum){
+    if(!(await waitForDB()))return;
+    try {
+      await window._fns.updateDoc(window._fns.doc(window._db,'orders',docId),{archived:true});
+      toast(`📦 Order ${orderNum} archived.`,'green');
+      loadOrders();
+    } catch(e){ toast('Error: '+e.message,'red'); }
+  }
+
+  async function unarchiveOrder(docId, orderNum){
+    if(!(await waitForDB()))return;
+    try {
+      await window._fns.updateDoc(window._fns.doc(window._db,'orders',docId),{archived:false});
+      toast(`✅ Order ${orderNum} moved back to active.`,'green');
+      loadOrders();
+    } catch(e){ toast('Error: '+e.message,'red'); }
+  }
+
   async function loadOrders(){
     const el=document.getElementById('orders-list');
     el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">Loading…</div>';
@@ -1306,13 +1363,22 @@
     try {
       const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
       if(snap.empty){el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">No orders yet.</div>';return;}
-      const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+      const docs=[];
+      snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+      // Filter by archive state
+      const filtered = docs.filter(o => _showingArchive ? o.archived===true : !o.archived);
       docs.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      filtered.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      if(filtered.length===0){
+        el.innerHTML=`<div style="padding:1.5rem;color:var(--muted);text-align:center">${_showingArchive?'Archive is empty.':'No active orders.'}</div>`;
+        return;
+      }
       el.innerHTML='';
-      docs.forEach(o=>{
+      filtered.forEach(o=>{
         const ts=o.createdAt?new Date(o.createdAt.seconds*1000).toLocaleString():'—';
+        const isArchived = o.archived===true;
         const div=document.createElement('div');
-        div.className='order-row';
+        div.className='order-row' + (isArchived?' archived-dim':'');
         div.innerHTML=`
           <div class="order-header" onclick="toggleOrder('${o.id}')">
             <div class="order-num-col">${o.orderNum||o.id}</div>
@@ -1333,6 +1399,12 @@
               <div class="det-item"><div class="det-key det-key-code">Payment Code</div><div class="det-val">${o.payCode||'—'}</div></div>
               <div class="det-item"><div class="det-key">IP</div><div class="det-val">${o.ip||'—'}</div></div>
               <div class="det-item"><div class="det-key">Ordered At</div><div class="det-val">${ts}</div></div>
+            </div>
+            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+              ${isArchived
+                ? `<button class="btn-unarchive" onclick="unarchiveOrder('${o.id}','${o.orderNum||o.id}')">↩ Move to Active</button>`
+                : `<button class="btn-archive" onclick="archiveOrder('${o.id}','${o.orderNum||o.id}')">📦 Archive Order</button>`
+              }
             </div>
           </div>`;
         el.appendChild(div);
@@ -1370,7 +1442,7 @@
     if(!orderData){toast('Order not found.','red');return;}
 
     const emailParams={
-      to_email: orderData.email,
+      email: orderData.email,
       order_num: orderData.orderNum,
       age_group: orderData.ageGroup,
       payment_method: orderData.payment,
@@ -1386,14 +1458,14 @@
       }
     }
 
-    await sendEmail(type, emailParams);
+    const sent = await sendEmail(type, emailParams);
 
     // Update order status in Firestore
     try {
       await window._fns.updateDoc(window._fns.doc(window._db,'orders',orderData.id),{status:type});
     } catch(e){console.warn('Status update failed:',e);}
 
-    toast(`✅ "${type}" notification sent to ${orderData.email}`, 'green');
+    if(sent) toast(`✅ Email sent to ${orderData.email}`, 'green');
     loadOrders();
   }
 
