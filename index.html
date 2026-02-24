@@ -1060,14 +1060,35 @@
       console.log('[EmailJS] Not configured — would send:', type, params);
       return;
     }
-    const templateMap = {
-      order_confirm:     cfg.orderConfirmTemplateId,
-      payment_declined:  cfg.paymentDeclinedTemplateId,
-      payment_accepted:  cfg.paymentAcceptedTemplateId,
-      finished:          cfg.finishedTemplateId,
+    // 2-template system:
+    //   Template 1 (orderConfirmTemplateId)  → order_confirm (automatic)
+    //   Template 2 (adminNotifTemplateId)    → declined / accepted / finished
+    //     Uses {{type}} variable to show the right section inside the template.
+    const subjectMap = {
+      order_confirm:    `Your AgeVerify Order – ${params.order_num}`,
+      payment_declined: `Action Required – Payment Issue with Order ${params.order_num}`,
+      payment_accepted: `Payment Confirmed – We're On It! (${params.order_num})`,
+      finished:         `Your Roblox Account is Ready! (${params.order_num})`,
     };
+    // Map internal type name → the {{type}} value used in template CSS class
+    const typeClassMap = {
+      payment_declined: 'declined',
+      payment_accepted: 'accepted',
+      finished:         'finished',
+    };
+
+    const templateId = type === 'order_confirm'
+      ? cfg.orderConfirmTemplateId
+      : cfg.adminNotifTemplateId;
+
+    const sendParams = {
+      ...params,
+      subject: subjectMap[type] || 'AgeVerify Notification',
+      type: typeClassMap[type] || '',  // injected into CSS class selector in template 2
+    };
+
     try {
-      await emailjs.send(cfg.serviceId, templateMap[type], params);
+      await emailjs.send(cfg.serviceId, templateId, sendParams);
     } catch(e) {
       console.error('EmailJS error:', e);
     }
