@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgeVerify — Roblox Age Estimation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <style>
+    :root {
+      --bg:    #070709;
+      --bg2:   #0d0d12;
+      --bg3:   #14141c;
+      --bg4:   #1c1c28;
+      --purple:       #9b5de5;
+      --purple-light: #c084fc;
+      --purple-dim:   #6d28d9;
+      --purple-glow:  rgba(155,93,229,0.22);
+      --text:   #ede8f5;
+      --text2:  #b8aecf;
+      --muted:  #6b6080;
+      --border: rgba(155,93,229,0.16);
+      --card:   rgba(16,12,28,0.72);
+      --red:    #ef4444;
+      --green:  #22c55e;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+    html { scroll-behavior:smooth; }
+
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden;
+    }
+
+    /* noise */
+    body::before {
+      content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity:.5;
+    }
+    .blob { position:fixed; border-radius:50%; filter:blur(130px); pointer-events:none; z-index:0; }
+    .blob1 { width:600px;height:600px;background:rgba(109,40,217,0.12);top:-180px;left:-200px; }
+    .blob2 { width:500px;height:500px;background:rgba(155,93,229,0.08);bottom:-120px;right:-180px; }
+    .blob3 { width:300px;height:300px;background:rgba(192,132,252,0.06);top:50%;left:50%;transform:translate(-50%,-50%); }
+
+    /* ── NAV ── */
+    nav {
+      position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 3rem;height:68px;
+      background:rgba(7,7,9,0.85);backdrop-filter:blur(24px);
+      border-bottom:1px solid var(--border);
+    }
+    .nav-logo {
+      font-family:'Unbounded',sans-serif;font-size:1.05rem;font-weight:700;
+      cursor:pointer;letter-spacing:-0.02em;color:var(--text);
+    }
+    .nav-logo em { color:var(--purple);font-style:normal; }
+    .nav-links { display:flex;gap:2.2rem; }
+    .nav-link {
+      font-family:'Unbounded',sans-serif;font-size:0.68rem;font-weight:500;
+      letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);
+      cursor:pointer;transition:color .2s;text-decoration:none;
+      background:none;border:none;
+    }
+    .nav-link:hover,.nav-link.active { color:var(--purple-light); }
+
+    /* ── PAGE SYSTEM ── */
+    .page { display:none;position:relative;z-index:1; }
+    .page.active { display:block; }
+
+    /* ── LOCKDOWN BANNER ── */
+    #lockdown-banner {
+      display:none;position:fixed;top:68px;left:0;right:0;z-index:150;
+      background:rgba(239,68,68,0.12);border-bottom:1px solid rgba(239,68,68,0.3);
+      padding:.7rem 2rem;text-align:center;
+      font-family:'Unbounded',sans-serif;font-size:.72rem;letter-spacing:.06em;
+      color:#fca5a5;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height:100vh;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      text-align:center;padding:120px 2rem 5rem;
+    }
+    .pill {
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:rgba(155,93,229,0.1);border:1px solid var(--border);
+      border-radius:999px;padding:.4rem 1.3rem;
+      font-size:.68rem;font-family:'Unbounded',sans-serif;
+      color:var(--purple-light);letter-spacing:.1em;text-transform:uppercase;
+      margin-bottom:2.8rem;animation:fadeUp .6s ease both;
+    }
+    .pill-dot {
+      width:6px;height:6px;border-radius:50%;
+      background:var(--purple);box-shadow:0 0 8px var(--purple);
+      animation:blink 2s infinite;
+    }
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+    .hero h1 {
+      font-family:'Unbounded',sans-serif;
+      font-size:clamp(2.6rem,7vw,5.8rem);font-weight:900;
+      line-height:.98;letter-spacing:-.035em;margin-bottom:1.6rem;
+      animation:fadeUp .6s .1s ease both;
+    }
+    .hero h1 .acc { color:var(--purple);display:block; }
+    .hero-sub {
+      font-size:1.05rem;color:var(--text2);max-width:520px;
+      line-height:1.75;margin-bottom:3.2rem;
+      animation:fadeUp .6s .2s ease both;
+    }
+    .hero-btns {
+      display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;
+      animation:fadeUp .6s .3s ease both;
+    }
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family:'Unbounded',sans-serif;font-size:.72rem;font-weight:600;
+      letter-spacing:.06em;text-transform:uppercase;padding:.9rem 2.2rem;
+      border-radius:7px;cursor:pointer;transition:all .2s;border:none;
+    }
+    .btn-primary {
+      background:var(--purple);color:#fff;
+      box-shadow:0 0 28px rgba(155,93,229,.38);
+    }
+    .btn-primary:hover {
+      background:var(--purple-light);
+      box-shadow:0 0 48px rgba(192,132,252,.5);transform:translateY(-1px);
+    }
+    .btn-primary:disabled { opacity:.5;cursor:not-allowed;transform:none; }
+    .btn-outline {
+      background:transparent;color:var(--text);
+      border:1px solid var(--border);
+    }
+    .btn-outline:hover { border-color:var(--purple);color:var(--purple-light);transform:translateY(-1px); }
+    .btn-sm { padding:.55rem 1.4rem;font-size:.65rem; }
+    .btn-danger { background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3); }
+    .btn-danger:hover { background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5); }
+    .btn-success { background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3); }
+    .btn-success:hover { background:rgba(34,197,94,.25); }
+
+    /* ── SECTION ── */
+    .section { padding:5rem 2rem;max-width:1100px;margin:0 auto; }
+    .sec-label {
+      font-family:'Unbounded',sans-serif;font-size:.62rem;
+      color:var(--purple);letter-spacing:.18em;text-transform:uppercase;margin-bottom:1rem;
+    }
+    .sec-title {
+      font-family:'Unbounded',sans-serif;
+      font-size:clamp(1.5rem,3vw,2.3rem);font-weight:700;
+      letter-spacing:-.025em;margin-bottom:3rem;
+    }
+    .grid-3 { display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1.4rem; }
+    .grid-2 { display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem; }
+
+    /* ── CARDS ── */
+    .card {
+      background:var(--card);border:1px solid var(--border);
+      border-radius:14px;padding:2rem;backdrop-filter:blur(12px);
+      transition:border-color .3s,transform .2s;
+    }
+    .card:hover { border-color:rgba(155,93,229,.45);transform:translateY(-3px); }
+    .card-icon { font-size:1.8rem;margin-bottom:1.2rem; }
+    .card h3 { font-family:'Unbounded',sans-serif;font-size:.88rem;font-weight:600;margin-bottom:.7rem; }
+    .card p { font-size:.88rem;color:var(--text2);line-height:1.7; }
+
+    /* ── STEPS ── */
+    .steps { display:flex;flex-direction:column;gap:1rem; }
+    .step {
+      display:flex;gap:1.5rem;align-items:flex-start;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:13px;padding:1.5rem;
+    }
+    .step-num {
+      font-family:'Unbounded',sans-serif;font-size:1.4rem;
+      font-weight:900;color:var(--purple);min-width:2.2rem;
+    }
+    .step h3 { font-family:'Unbounded',sans-serif;font-size:.82rem;font-weight:600;margin-bottom:.35rem; }
+    .step p { font-size:.88rem;color:var(--text2);line-height:1.65; }
+
+    /* ── PURCHASE FLOW ── */
+    .flow-shell {
+      min-height:100vh;padding:100px 2rem 5rem;
+      display:flex;flex-direction:column;align-items:center;
+    }
+    .flow-inner { width:100%;max-width:680px; }
+    .flow-step { display:none; }
+    .flow-step.active { display:block; }
+
+    .flow-head { margin-bottom:2.8rem; }
+    .flow-head h2 {
+      font-family:'Unbounded',sans-serif;
+      font-size:clamp(1.5rem,3.5vw,2.2rem);font-weight:800;
+      letter-spacing:-.025em;line-height:1.1;
+    }
+    .flow-head p { font-size:.9rem;color:var(--text2);margin-top:.7rem;line-height:1.7; }
+
+    .progress-track {
+      display:flex;gap:.4rem;margin-bottom:2.8rem;
+    }
+    .pt { height:3px;flex:1;border-radius:999px;background:var(--border);transition:background .3s; }
+    .pt.on { background:var(--purple); }
+
+    /* option cards */
+    .opt-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem; }
+    .opt-card {
+      background:var(--card);border:2px solid var(--border);
+      border-radius:14px;padding:2rem 1.6rem;cursor:pointer;
+      transition:all .25s;position:relative;overflow:hidden;
+    }
+    .opt-card::after {
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(155,93,229,.07),transparent);
+      opacity:0;transition:opacity .25s;
+    }
+    .opt-card:hover { border-color:var(--purple);transform:translateY(-3px);box-shadow:0 16px 48px rgba(155,93,229,.18); }
+    .opt-card:hover::after { opacity:1; }
+    .opt-card.sel { border-color:var(--purple);box-shadow:0 0 0 3px rgba(155,93,229,.14); }
+    .opt-card.sel::after { opacity:1; }
+    .opt-card.dim { opacity:.4;pointer-events:none; }
+    .opt-icon { font-size:2rem;margin-bottom:.9rem; }
+    .opt-title { font-family:'Unbounded',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:.6rem; }
+    .opt-desc { font-size:.82rem;color:var(--text2);line-height:1.6; }
+    .cs-tag {
+      display:inline-block;font-family:'Unbounded',sans-serif;
+      font-size:.6rem;color:var(--muted);margin-left:.4rem;
+    }
+
+    /* form elements */
+    .field { margin-bottom:1.2rem; }
+    .field-label {
+      display:block;font-family:'Unbounded',sans-serif;
+      font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:.45rem;
+    }
+    .field-input {
+      width:100%;background:var(--bg3);border:1px solid var(--border);
+      border-radius:8px;padding:.85rem 1.1rem;
+      color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;
+      outline:none;transition:border-color .2s,box-shadow .2s;
+    }
+    .field-input:focus { border-color:var(--purple);box-shadow:0 0 0 3px rgba(155,93,229,.1); }
+    .field-hint { font-size:.75rem;color:var(--muted);margin-top:.35rem;line-height:1.5; }
+
+    .info-box {
+      background:rgba(155,93,229,.08);border:1px solid rgba(155,93,229,.28);
+      border-radius:10px;padding:1rem 1.3rem;
+      font-size:.83rem;color:var(--purple-light);line-height:1.65;
+      margin-bottom:1.6rem;
+    }
+    .warn-box {
+      background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.22);
+      border-radius:10px;padding:1rem 1.3rem;
+      font-size:.82rem;color:#fca5a5;line-height:1.65;
+      margin-bottom:1.6rem;
+    }
+
+    /* payment cards */
+    .pay-grid { display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.8rem; }
+    @media(max-width:480px){ .pay-grid{grid-template-columns:1fr;} }
+    .pay-card {
+      background:var(--card);border:2px solid var(--border);
+      border-radius:12px;padding:1.3rem;cursor:pointer;
+      transition:all .2s;display:flex;align-items:flex-start;gap:.9rem;
+    }
+    .pay-card:hover { border-color:var(--purple); }
+    .pay-card.sel { border-color:var(--purple);background:rgba(155,93,229,.09); }
+    .pay-icon { font-size:1.5rem;margin-top:.1rem; }
+    .pay-label { font-family:'Unbounded',sans-serif;font-size:.76rem;font-weight:600;margin-bottom:.25rem; }
+    .pay-hint { font-size:.76rem;color:var(--muted);line-height:1.45; }
+
+    /* username group */
+    .un-group { display:flex;flex-direction:column;gap:.85rem;margin-bottom:1.4rem; }
+    .un-row { position:relative; }
+    .un-badge {
+      position:absolute;right:1rem;top:50%;transform:translateY(-50%);
+      font-family:'Unbounded',sans-serif;font-size:.6rem;
+      color:var(--muted);letter-spacing:.08em;pointer-events:none;
+    }
+
+    /* ── SUCCESS ── */
+    .success-shell {
+      min-height:100vh;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      padding:2rem;text-align:center;
+    }
+    .success-icon { font-size:4.5rem;margin-bottom:1.4rem;animation:pop .55s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+    .success-title {
+      font-family:'Unbounded',sans-serif;
+      font-size:clamp(1.4rem,4vw,2.4rem);font-weight:800;
+      letter-spacing:-.025em;margin-bottom:1rem;
+    }
+    .order-num {
+      font-family:'Unbounded',sans-serif;font-size:.68rem;
+      color:var(--purple);letter-spacing:.15em;margin-bottom:2rem;
+    }
+    .order-num span { color:var(--purple-light);font-size:.95rem; }
+    .notice-box {
+      background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:1.4rem 1.8rem;max-width:500px;
+      font-size:.88rem;color:var(--text2);line-height:1.75;text-align:left;
+      margin-bottom:2rem;
+    }
+    .notice-box strong { color:var(--text); }
+
+    /* ── ADMIN ── */
+    .admin-login-shell {
+      min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;
+    }
+    .admin-card {
+      background:var(--card);border:1px solid var(--border);
+      border-radius:18px;padding:3rem;width:100%;max-width:420px;
+      backdrop-filter:blur(14px);
+    }
+    .otp-row { display:flex;gap:.55rem;justify-content:center;margin-bottom:1.8rem; }
+    .otp-b {
+      width:46px;height:56px;background:var(--bg3);
+      border:2px solid var(--border);border-radius:10px;
+      text-align:center;font-family:'Unbounded',sans-serif;
+      font-size:1.35rem;font-weight:700;color:var(--text);
+      outline:none;transition:border-color .2s,box-shadow .2s;
+      caret-color:var(--purple);
+    }
+    .otp-b:focus { border-color:var(--purple);box-shadow:0 0 0 3px rgba(155,93,229,.16); }
+    .otp-b.filled { border-color:rgba(155,93,229,.45); }
+    .otp-b.err { border-color:var(--red);animation:shake .38s ease; }
+    .otp-sep { display:flex;align-items:center;color:var(--muted);font-size:1.3rem; }
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+    .countdown-ring { display:flex;flex-direction:column;align-items:center;gap:.4rem;margin-bottom:1.5rem; }
+    .ring-label { font-family:'Unbounded',sans-serif;font-size:.6rem;letter-spacing:.08em;color:var(--muted); }
+
+    /* admin panel */
+    .panel-wrap { max-width:1100px;margin:0 auto;padding:100px 2rem 5rem; }
+    .panel-title {
+      font-family:'Unbounded',sans-serif;font-size:clamp(1.4rem,3vw,2rem);
+      font-weight:800;letter-spacing:-.025em;margin-bottom:.5rem;
+    }
+    .panel-sub { font-size:.88rem;color:var(--text2);margin-bottom:2.5rem; }
+
+    .panel-section { margin-bottom:3rem; }
+    .panel-section-title {
+      font-family:'Unbounded',sans-serif;font-size:.7rem;
+      letter-spacing:.12em;text-transform:uppercase;color:var(--purple);
+      margin-bottom:1.2rem;
+      display:flex;align-items:center;gap:.7rem;
+    }
+    .panel-section-title::after {
+      content:'';flex:1;height:1px;background:var(--border);
+    }
+
+    /* orders table */
+    .orders-list { display:flex;flex-direction:column;gap:.8rem; }
+    .order-row {
+      background:var(--card);border:1px solid var(--border);
+      border-radius:12px;overflow:hidden;transition:border-color .2s;
+    }
+    .order-row:hover { border-color:rgba(155,93,229,.35); }
+    .order-header {
+      display:flex;align-items:center;gap:1.5rem;
+      padding:1rem 1.4rem;cursor:pointer;
+    }
+    .order-header:hover { background:rgba(155,93,229,.04); }
+    .order-num-col {
+      font-family:'Unbounded',sans-serif;font-size:.7rem;
+      color:var(--purple-light);min-width:140px;
+    }
+    .order-email-col { font-size:.84rem;color:var(--text2);flex:1; }
+    .order-status { margin-left:auto;display:flex;gap:.6rem;align-items:center; }
+    .badge {
+      display:inline-block;padding:.2rem .75rem;border-radius:999px;
+      font-size:.65rem;font-family:'Unbounded',sans-serif;
+    }
+    .b-purple { background:rgba(155,93,229,.18);color:var(--purple-light); }
+    .b-green  { background:rgba(34,197,94,.15);color:#86efac; }
+    .b-blue   { background:rgba(59,130,246,.15);color:#93c5fd; }
+    .b-orange { background:rgba(251,146,60,.15);color:#fdba74; }
+    .b-red    { background:rgba(239,68,68,.15);color:#fca5a5; }
+    .b-gray   { background:rgba(255,255,255,.07);color:var(--text2); }
+    .chevron { color:var(--muted);font-size:.8rem;transition:transform .2s;margin-left:.5rem; }
+    .chevron.open { transform:rotate(180deg); }
+
+    .order-details {
+      display:none;padding:1.2rem 1.4rem 1.4rem;
+      border-top:1px solid var(--border);
+    }
+    .order-details.open { display:block; }
+    .det-grid {
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:.7rem 1.5rem;margin-bottom:1.4rem;
+    }
+    .det-item {}
+    .det-key {
+      font-family:'Unbounded',sans-serif;font-size:.58rem;
+      letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem;
+    }
+    .det-val { font-size:.84rem;color:var(--text);word-break:break-all; }
+    .det-key-code { color:var(--purple-light); }
+
+    /* admin controls */
+    .ctrl-row {
+      display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;
+      padding:1.1rem 1.4rem;
+      background:var(--card);border:1px solid var(--border);border-radius:12px;
+      margin-bottom:.8rem;
+    }
+    .ctrl-label {
+      font-family:'Unbounded',sans-serif;font-size:.68rem;
+      color:var(--text2);min-width:120px;
+    }
+    .ctrl-input {
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:7px;padding:.55rem .9rem;
+      color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;
+      outline:none;transition:border-color .2s;
+      flex:1;min-width:140px;
+    }
+    .ctrl-input:focus { border-color:var(--purple); }
+    .ctrl-select {
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:7px;padding:.55rem .9rem;
+      color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;
+      outline:none;cursor:pointer;
+    }
+
+    /* lockdown active indicator */
+    .lockdown-active-badge {
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
+      border-radius:999px;padding:.3rem 1rem;
+      font-family:'Unbounded',sans-serif;font-size:.63rem;
+      color:#fca5a5;letter-spacing:.06em;
+    }
+
+    footer {
+      text-align:center;padding:2rem;font-size:.74rem;color:var(--muted);
+      border-top:1px solid var(--border);position:relative;z-index:1;
+    }
+
+    /* toast */
+    #toast {
+      position:fixed;bottom:2rem;right:2rem;z-index:500;
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:10px;padding:1rem 1.4rem;
+      font-size:.84rem;color:var(--text);
+      box-shadow:0 8px 32px rgba(0,0,0,.5);
+      transform:translateY(100px);opacity:0;
+      transition:all .3s cubic-bezier(.34,1.56,.64,1);
+      max-width:320px;
+    }
+    #toast.show { transform:translateY(0);opacity:1; }
+
+    hr.divider { border:none;border-top:1px solid var(--border);margin:1.5rem 0; }
+
+    /* TOTP setup QR area */
+    .setup-area {
+      margin-top:1.8rem;border-top:1px solid var(--border);
+      padding-top:1.5rem;text-align:center;
+    }
+    .setup-area p { font-size:.76rem;color:var(--muted);margin-bottom:.8rem;line-height:1.6; }
+    .setup-qr { display:inline-block;background:#fff;padding:8px;border-radius:8px; }
+    .setup-secret {
+      font-family:'Unbounded',sans-serif;font-size:.75rem;
+      color:var(--purple-light);letter-spacing:.1em;margin-top:.5rem;
+    }
+
+    @media(max-width:640px){
+      nav { padding:0 1.2rem; }
+      .panel-wrap { padding:90px 1rem 3rem; }
+      .order-header { flex-wrap:wrap;gap:.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<!-- lockdown banner -->
+<div id="lockdown-banner">
+  🔒 &nbsp;SERVICE TEMPORARILY UNAVAILABLE — We are not accepting orders right now. Please check back later.
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showPage('home')">Age<em>Verify</em></div>
+  <div class="nav-links">
+    <button class="nav-link active" id="nav-home" onclick="showPage('home')">Home</button>
+    <button class="nav-link" id="nav-purchase" onclick="startPurchase()">Order</button>
+  </div>
+</nav>
+
+<!-- toast -->
+<div id="toast"></div>
+
+<!-- ═══════════════════ HOME ═══════════════════ -->
+<div id="page-home" class="page active">
+  <section class="hero">
+    <div class="pill"><div class="pill-dot"></div>Roblox Age Estimation Service</div>
+    <h1>Get Your Account<span class="acc">Age Verified.</span></h1>
+    <p class="hero-sub">We manually create a new Roblox account and complete the age estimation so you can access age-restricted features — fast and reliable.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary" onclick="startPurchase()">Place an Order</button>
+      <button class="btn btn-outline" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it works</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="sec-label">What We Offer</p>
+    <h2 class="sec-title">Simple. Manual. Reliable.</h2>
+    <div class="grid-3">
+      <div class="card"><div class="card-icon">✨</div><h3>New Account</h3><p>We create a brand-new Roblox account with the age estimation already completed and hand it over to you.</p></div>
+      <div class="card"><div class="card-icon">🎂</div><h3>Age Groups</h3><p>Choose between 13–15 or 16–17 years. More groups coming soon. Pick the one that fits your needs.</p></div>
+      <div class="card"><div class="card-icon">💜</div><h3>Alternative Payment</h3><p>Since we're minors, we accept gift cards and digital items instead of real-money transactions.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <p class="sec-label">Process</p>
+    <h2 class="sec-title">How It Works</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">01</div><div><h3>Submit Your Order</h3><p>Enter your email, preferred usernames, and desired age group. We'll try your preferred username first, with two fallbacks.</p></div></div>
+      <div class="step"><div class="step-num">02</div><div><h3>Choose &amp; Send Payment</h3><p>Pick your preferred payment method and enter the gift card code or equivalent. We'll validate it on our end.</p></div></div>
+      <div class="step"><div class="step-num">03</div><div><h3>We Get to Work</h3><p>Once payment is confirmed we create and age-verify the account. We'll email you at every step of the way.</p></div></div>
+      <div class="step"><div class="step-num">04</div><div><h3>Receive Your Account</h3><p>When done, you'll get the account credentials via email. Ready to use straight away.</p></div></div>
+    </div>
+  </section>
+
+  <footer>© 2024 AgeVerify — Roblox Age Estimation Service</footer>
+</div>
+
+<!-- ═══════════════════ PURCHASE FLOW ═══════════════════ -->
+<div id="page-purchase" class="page">
+  <div class="flow-shell">
+    <div class="flow-inner">
+
+      <!-- STEP 1: Email -->
+      <div class="flow-step active" id="fs-email">
+        <div class="progress-track">
+          <div class="pt on"></div><div class="pt"></div><div class="pt"></div><div class="pt"></div>
+        </div>
+        <div class="flow-head">
+          <h2>Your Email</h2>
+          <p>We'll use this to send you order updates and deliver your account when it's ready.</p>
+        </div>
+        <div class="field">
+          <label class="field-label">Email Address</label>
+          <input class="field-input" id="f-email" type="email" placeholder="you@example.com" />
+          <div class="field-hint">Make sure to check your junk/spam folder too.</div>
+        </div>
+        <div style="margin-top:1.6rem">
+          <button class="btn btn-primary" onclick="stepEmailNext()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Usernames + Age -->
+      <div class="flow-step" id="fs-details">
+        <div class="progress-track">
+          <div class="pt on"></div><div class="pt on"></div><div class="pt"></div><div class="pt"></div>
+        </div>
+        <div class="flow-head">
+          <h2>Account Details</h2>
+          <p>Choose up to 3 preferred usernames and your desired age group. All username fields are optional — leave blank for a random name.</p>
+        </div>
+
+        <div class="info-box">
+          💡 We'll try your first username. If it's taken, we'll try the second, then the third. If all three are taken or left blank, a random username is generated.
+        </div>
+
+        <div class="un-group">
+          <div class="un-row">
+            <input class="field-input" id="un1" type="text" placeholder="First choice (optional)" />
+            <span class="un-badge">1st</span>
+          </div>
+          <div class="un-row">
+            <input class="field-input" id="un2" type="text" placeholder="Second choice (optional)" />
+            <span class="un-badge">2nd</span>
+          </div>
+          <div class="un-row">
+            <input class="field-input" id="un3" type="text" placeholder="Third choice (optional)" />
+            <span class="un-badge">3rd</span>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:1.2rem">
+          <label class="field-label">Age Group</label>
+          <div class="opt-grid">
+            <div class="opt-card" id="age-13" onclick="selAge('13-15')">
+              <div class="opt-icon">🎂</div>
+              <div class="opt-title">13 – 15 Years</div>
+              <div class="opt-desc">Access features available to verified 13+ users on Roblox.</div>
+            </div>
+            <div class="opt-card" id="age-16" onclick="selAge('16-17')">
+              <div class="opt-icon">🎉</div>
+              <div class="opt-title">16 – 17 Years</div>
+              <div class="opt-desc">Unlock age-restricted features available to 17+ on Roblox.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-top:1.8rem;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="showFStep('fs-email')">← Back</button>
+          <button class="btn btn-primary" onclick="stepDetailsNext()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Payment -->
+      <div class="flow-step" id="fs-payment">
+        <div class="progress-track">
+          <div class="pt on"></div><div class="pt on"></div><div class="pt on"></div><div class="pt"></div>
+        </div>
+        <div class="flow-head">
+          <h2>Payment</h2>
+          <p>Choose a payment method and enter your code below.</p>
+        </div>
+
+        <div class="info-box">
+          💜 <strong>Why no real payments?</strong> Since we're both minors, we can't legally accept real-money payments. Instead we accept gift cards and digital items as compensation.
+        </div>
+
+        <div class="pay-grid">
+          <div class="pay-card" id="pay-roblox" onclick="selPay('roblox')">
+            <div class="pay-icon">🎮</div>
+            <div>
+              <div class="pay-label">Roblox Gift Card</div>
+              <div class="pay-hint">Any amount. Enter the card code below.</div>
+            </div>
+          </div>
+          <div class="pay-card" id="pay-nitro" onclick="selPay('nitro')">
+            <div class="pay-icon">💜</div>
+            <div>
+              <div class="pay-label">Discord Nitro</div>
+              <div class="pay-hint">Gift code from Discord or a third-party.</div>
+            </div>
+          </div>
+          <div class="pay-card" id="pay-steam" onclick="selPay('steam')">
+            <div class="pay-icon">🎮</div>
+            <div>
+              <div class="pay-label">Steam Gift Card</div>
+              <div class="pay-hint">Any amount. Enter the card code below.</div>
+            </div>
+          </div>
+          <div class="pay-card" id="pay-wishlist" onclick="selPay('wishlist')">
+            <div class="pay-icon">⭐</div>
+            <div>
+              <div class="pay-label">Steam Wishlist Item</div>
+              <div class="pay-hint">Gift a game from our Steam wishlist. Enter the gift confirmation code.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="pay-code-wrap" style="display:none">
+          <label class="field-label" id="pay-code-label">Gift Card Code</label>
+          <input class="field-input" id="pay-code" type="text" placeholder="Enter code here…" />
+          <div class="field-hint" id="pay-code-hint"></div>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-top:1.6rem;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="showFStep('fs-details')">← Back</button>
+          <button class="btn btn-primary" id="pay-submit-btn" onclick="stepPaySubmit()">Submit Order →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Confirm -->
+      <div class="flow-step" id="fs-confirm">
+        <div class="progress-track">
+          <div class="pt on"></div><div class="pt on"></div><div class="pt on"></div><div class="pt on"></div>
+        </div>
+        <div class="success-shell" style="min-height:auto;padding:0">
+          <div class="success-icon">✅</div>
+          <h2 class="success-title">Order Received!</h2>
+          <div class="order-num">ORDER NUMBER: <span id="order-num-display">—</span></div>
+
+          <div class="notice-box">
+            <strong>What happens next?</strong><br><br>
+            You'll receive a confirmation email shortly — please also check your <strong>junk/spam folder</strong>.<br><br>
+            ⚠️ <strong>Please note:</strong> Our service is not fully automated and we currently consist of only 2 people. Completing the age estimation might take a while. You will be notified by email at every step and once your account is ready.
+          </div>
+
+          <button class="btn btn-outline" onclick="resetPurchase()">Place another order</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADMIN LOGIN ═══════════════════ -->
+<div id="page-admin-login" class="page">
+  <div class="admin-login-shell">
+    <div class="admin-card">
+      <div style="text-align:center;margin-bottom:2rem">
+        <div style="font-size:2.2rem;margin-bottom:1rem">🔐</div>
+        <p class="sec-label" style="justify-content:center;display:flex">Admin Access</p>
+        <h2 style="font-family:'Unbounded',sans-serif;font-size:1.25rem;letter-spacing:-.02em;margin-top:.4rem">Two-Factor Login</h2>
+        <p style="font-size:.82rem;color:var(--text2);margin-top:.55rem;line-height:1.65">Enter the 6-digit code from your authenticator app.</p>
+      </div>
+
+      <div class="otp-row">
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+        <div class="otp-sep">·</div>
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+        <input class="otp-b" maxlength="1" type="text" inputmode="numeric" />
+      </div>
+
+      <div class="countdown-ring">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(155,93,229,.14)" stroke-width="3"/>
+          <circle id="totp-ring" cx="22" cy="22" r="18" fill="none" stroke="var(--purple)" stroke-width="3"
+            stroke-dasharray="113.1" stroke-dashoffset="0" stroke-linecap="round"
+            transform="rotate(-90 22 22)" style="transition:stroke-dashoffset 1s linear,stroke .3s"/>
+          <text x="22" y="26.5" text-anchor="middle" fill="var(--text)" font-size="10"
+            font-family="'Unbounded',sans-serif" id="totp-cnt">30</text>
+        </svg>
+        <span class="ring-label">CODE EXPIRES IN</span>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%" onclick="verifyTOTP()">Verify</button>
+      <p id="otp-err" style="color:#fca5a5;font-size:.78rem;margin-top:.9rem;text-align:center;display:none">❌ Invalid code — try again.</p>
+
+      <div class="setup-area">
+        <p>First time? Scan this QR code with Google Authenticator, Aegis, or Authy.</p>
+        <div class="setup-qr" id="setup-qr"></div>
+        <p class="setup-secret" id="setup-secret"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADMIN PANEL ═══════════════════ -->
+<div id="page-admin" class="page">
+  <div class="panel-wrap">
+    <p class="sec-label">Admin Panel</p>
+    <h2 class="panel-title">Order Management</h2>
+    <p class="panel-sub">Manage orders, send email notifications, and control service availability.</p>
+
+    <!-- Orders -->
+    <div class="panel-section">
+      <div class="panel-section-title">📋 Orders</div>
+      <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="loadOrders()">↻ Refresh</button>
+      </div>
+      <div id="orders-list" class="orders-list">
+        <div style="text-align:center;padding:2rem;color:var(--muted)">Loading orders…</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Email Notifications -->
+    <div class="panel-section">
+      <div class="panel-section-title">✉️ Send Email Notification</div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Order Number</span>
+        <input class="ctrl-input" id="notif-order" placeholder="e.g. ORD-ABC123-XY" />
+        <select class="ctrl-select" id="notif-type">
+          <option value="">— Select notification —</option>
+          <option value="payment_declined">Payment Declined</option>
+          <option value="payment_accepted">Payment Accepted</option>
+          <option value="finished">Finished (+ account data)</option>
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="sendNotification()">Send</button>
+        <button class="btn btn-sm btn-danger" id="cancel-order-btn" style="display:none" onclick="cancelOrder()">Cancel Order</button>
+      </div>
+
+      <!-- Finished: account data fields -->
+      <div id="finished-fields" style="display:none;margin-top:1rem">
+        <div class="info-box" style="margin-bottom:1rem">
+          📦 Fill in the account data to include in the "Finished" email.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+          <div class="field">
+            <label class="field-label">Roblox Username</label>
+            <input class="field-input ctrl-input" id="fin-user" placeholder="Given username" />
+          </div>
+          <div class="field">
+            <label class="field-label">Password</label>
+            <input class="field-input ctrl-input" id="fin-pass" placeholder="Account password" />
+          </div>
+          <div class="field">
+            <label class="field-label">Email on Account</label>
+            <input class="field-input ctrl-input" id="fin-email" placeholder="Email used for account" />
+          </div>
+          <div class="field">
+            <label class="field-label">Extra Notes (optional)</label>
+            <input class="field-input ctrl-input" id="fin-notes" placeholder="Any additional info" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- IP Ban -->
+    <div class="panel-section">
+      <div class="panel-section-title">🚫 IP Ban</div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Order Number</span>
+        <input class="ctrl-input" id="ban-order" placeholder="Order number to ban IP" />
+        <button class="btn btn-sm btn-danger" onclick="banIP()">Ban IP</button>
+        <button class="btn btn-sm btn-success" onclick="unbanIP()">Unban IP</button>
+      </div>
+      <div id="ban-result" style="font-size:.8rem;color:var(--text2);margin-top:.7rem;padding-left:.2rem"></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Global Lockdown -->
+    <div class="panel-section">
+      <div class="panel-section-title">🔒 Global Lockdown</div>
+      <div id="lockdown-status" style="margin-bottom:1rem"></div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Duration</span>
+        <input class="ctrl-input" id="lock-amount" type="number" min="1" placeholder="e.g. 2" style="max-width:100px" />
+        <select class="ctrl-select" id="lock-unit">
+          <option value="minutes">Minutes</option>
+          <option value="hours">Hours</option>
+          <option value="days" selected>Days</option>
+          <option value="weeks">Weeks</option>
+          <option value="months">Months</option>
+          <option value="years">Years</option>
+        </select>
+        <button class="btn btn-sm btn-danger" onclick="activateLockdown()">Activate Lockdown</button>
+        <button class="btn btn-sm btn-success" onclick="liftLockdown()">Lift Lockdown</button>
+      </div>
+    </div>
+
+    <div style="margin-top:3rem">
+      <button class="btn btn-outline btn-sm" onclick="adminLogout()">← Log Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script type="module">
+  import { firebaseConfig, emailjsConfig, TOTP_SECRET, ADMIN_PARAM } from './firebase-config.js';
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, doc,
+    getDoc, setDoc, updateDoc, deleteDoc, query, orderBy,
+    serverTimestamp, where
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // expose to global scope so non-module functions can use them
+  window._db   = db;
+  window._fns  = { collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, where };
+  window._cfg  = { emailjsConfig, TOTP_SECRET, ADMIN_PARAM };
+
+  // Init EmailJS
+  if (emailjsConfig.publicKey && emailjsConfig.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+    emailjs.init({ publicKey: emailjsConfig.publicKey });
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  window.addEventListener('load', async () => {
+    // Check admin param
+    const params = new URLSearchParams(location.search);
+    if (params.has(window._cfg.ADMIN_PARAM)) {
+      document.querySelectorAll('.nav-link').forEach(l => l.style.display='none');
+      showPage('admin-login');
+      initOTPBoxes();
+      initRing();
+      initSetupQR();
+      return;
+    }
+
+    // Normal boot — check lockdown
+    await checkLockdownBanner();
+  });
+
+  window.dispatchEvent(new Event('app-ready'));
+</script>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GLOBAL STATE
+  // ═══════════════════════════════════════════════════════════════════════════
+  const G = {
+    email: '', un1:'', un2:'', un3:'',
+    ageGroup: '', payment: '', payCode: '',
+    orderNum: ''
+  };
+
+  // ── Page routing ──────────────────────────────────────────────────────────
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function startPurchase() {
+    // Check lockdown
+    const ld = sessionStorage.getItem('lockdown');
+    if (ld) {
+      try {
+        const o = JSON.parse(ld);
+        if (o.until > Date.now()) {
+          toast('🔒 Service is temporarily unavailable. Please check back later.', 'red');
+          return;
+        }
+      } catch(e){}
+    }
+    showPage('purchase');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('nav-purchase').classList.add('active');
+  }
+
+  // ── Flow steps ───────────────────────────────────────────────────────────
+  function showFStep(id) {
+    document.querySelectorAll('.flow-step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function stepEmailNext() {
+    const v = document.getElementById('f-email').value.trim();
+    if (!v || !v.includes('@')) { toast('Please enter a valid email address.', 'red'); return; }
+    G.email = v;
+    showFStep('fs-details');
+  }
+
+  function selAge(g) {
+    G.ageGroup = g;
+    document.getElementById('age-13').classList.toggle('sel', g==='13-15');
+    document.getElementById('age-16').classList.toggle('sel', g==='16-17');
+  }
+
+  function stepDetailsNext() {
+    if (!G.ageGroup) { toast('Please select an age group.', 'red'); return; }
+    G.un1 = document.getElementById('un1').value.trim();
+    G.un2 = document.getElementById('un2').value.trim();
+    G.un3 = document.getElementById('un3').value.trim();
+    showFStep('fs-payment');
+  }
+
+  const payHints = {
+    roblox:   ['Roblox Gift Card Code', 'Found on the back of the card or in your email.', 'RBXCARD1234-XXXX'],
+    nitro:    ['Discord Nitro Gift Code', 'From Discord or a third-party seller — starts with discord.gift/ or is a standalone code.', 'discord.gift/XXXX or standalone code'],
+    steam:    ['Steam Wallet Code', 'Found on the back of the card or in your purchase email.', 'XXXXX-XXXXX-XXXXX'],
+    wishlist: ['Gift Confirmation Code', 'After gifting us a Steam game, enter the confirmation/order number here.', 'Steam order/confirmation number'],
+  };
+
+  function selPay(p) {
+    G.payment = p;
+    ['roblox','nitro','steam','wishlist'].forEach(k => {
+      document.getElementById('pay-'+k).classList.toggle('sel', k===p);
+    });
+    const [label, hint, placeholder] = payHints[p];
+    document.getElementById('pay-code-label').textContent = label;
+    document.getElementById('pay-code-hint').textContent = hint;
+    document.getElementById('pay-code').placeholder = placeholder;
+    document.getElementById('pay-code-wrap').style.display = 'block';
+  }
+
+  async function stepPaySubmit() {
+    if (!G.payment) { toast('Please select a payment method.', 'red'); return; }
+    const code = document.getElementById('pay-code').value.trim();
+    if (!code) { toast('Please enter your payment code.', 'red'); return; }
+    G.payCode = code;
+
+    const btn = document.getElementById('pay-submit-btn');
+    btn.textContent = 'Submitting…'; btn.disabled = true;
+
+    // Generate order number
+    const ts  = Date.now().toString(36).toUpperCase();
+    const rnd = Math.random().toString(36).slice(2,6).toUpperCase();
+    G.orderNum = `ORD-${ts}-${rnd}`;
+
+    // Get IP (best-effort)
+    let ip = 'unknown';
+    try {
+      const r = await fetch('https://api.ipify.org?format=json');
+      const j = await r.json();
+      ip = j.ip;
+    } catch(e) {}
+
+    // Check IP ban
+    if (window._db) {
+      try {
+        const banDoc = await window._fns.getDoc(window._fns.doc(window._db, 'bans', ip));
+        if (banDoc.exists()) {
+          toast('Your access has been restricted. Contact support if you think this is an error.', 'red');
+          btn.textContent = 'Submit Order →'; btn.disabled = false;
+          return;
+        }
+      } catch(e){}
+    }
+
+    // Save to Firestore
+    if (window._db) {
+      try {
+        await window._fns.addDoc(
+          window._fns.collection(window._db, 'orders'),
+          {
+            orderNum: G.orderNum,
+            email: G.email,
+            username1: G.un1 || null,
+            username2: G.un2 || null,
+            username3: G.un3 || null,
+            ageGroup: G.ageGroup,
+            payment: G.payment,
+            payCode: G.payCode,
+            ip,
+            status: 'pending',
+            createdAt: window._fns.serverTimestamp()
+          }
+        );
+      } catch(e) { console.warn('Firestore write failed:', e); }
+    }
+
+    // Send order confirmation email
+    await sendEmail('order_confirm', {
+      to_email: G.email,
+      order_num: G.orderNum,
+      age_group: G.ageGroup,
+      payment_method: G.payment,
+    });
+
+    document.getElementById('order-num-display').textContent = G.orderNum;
+    btn.textContent = 'Submit Order →'; btn.disabled = false;
+    showFStep('fs-confirm');
+  }
+
+  function resetPurchase() {
+    Object.assign(G, {email:'',un1:'',un2:'',un3:'',ageGroup:'',payment:'',payCode:'',orderNum:''});
+    document.querySelectorAll('.opt-card').forEach(c=>c.classList.remove('sel'));
+    document.querySelectorAll('.pay-card').forEach(c=>c.classList.remove('sel'));
+    document.getElementById('f-email').value='';
+    document.getElementById('un1').value='';
+    document.getElementById('un2').value='';
+    document.getElementById('un3').value='';
+    document.getElementById('pay-code').value='';
+    document.getElementById('pay-code-wrap').style.display='none';
+    showPage('purchase');
+    showFStep('fs-email');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMAIL (EmailJS)
+  // ═══════════════════════════════════════════════════════════════════════════
+  async function sendEmail(type, params) {
+    const cfg = window._cfg?.emailjsConfig;
+    if (!cfg || cfg.publicKey === 'YOUR_EMAILJS_PUBLIC_KEY') {
+      console.log('[EmailJS] Not configured — would send:', type, params);
+      return;
+    }
+    const templateMap = {
+      order_confirm:     cfg.orderConfirmTemplateId,
+      payment_declined:  cfg.paymentDeclinedTemplateId,
+      payment_accepted:  cfg.paymentAcceptedTemplateId,
+      finished:          cfg.finishedTemplateId,
+    };
+    try {
+      await emailjs.send(cfg.serviceId, templateMap[type], params);
+    } catch(e) {
+      console.error('EmailJS error:', e);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LOCKDOWN
+  // ═══════════════════════════════════════════════════════════════════════════
+  async function checkLockdownBanner() {
+    if (!window._db) return;
+    try {
+      const d = await window._fns.getDoc(window._fns.doc(window._db, 'settings', 'lockdown'));
+      if (d.exists()) {
+        const { until } = d.data();
+        const ms = until?.toMillis ? until.toMillis() : until;
+        if (ms > Date.now()) {
+          document.getElementById('lockdown-banner').style.display = 'block';
+          sessionStorage.setItem('lockdown', JSON.stringify({ until: ms }));
+        } else {
+          sessionStorage.removeItem('lockdown');
+        }
+      }
+    } catch(e) {}
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TOTP 2FA
+  // ═══════════════════════════════════════════════════════════════════════════
+  function b32decode(s) {
+    const a='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    s=s.toUpperCase().replace(/=+$/,'');
+    let bits=0,val=0;const out=[];
+    for(const c of s){const i=a.indexOf(c);if(i===-1)continue;val=(val<<5)|i;bits+=5;if(bits>=8){bits-=8;out.push((val>>>bits)&0xff);}}
+    return new Uint8Array(out);
+  }
+  async function hotp(secret,counter){
+    const key=await crypto.subtle.importKey('raw',secret,{name:'HMAC',hash:'SHA-1'},false,['sign']);
+    const msg=new DataView(new ArrayBuffer(8));
+    msg.setUint32(0,Math.floor(counter/2**32));msg.setUint32(4,counter>>>0);
+    const sig=new Uint8Array(await crypto.subtle.sign('HMAC',key,msg.buffer));
+    const o=sig[19]&0xf;
+    return(((sig[o]&0x7f)<<24|sig[o+1]<<16|sig[o+2]<<8|sig[o+3])%1e6).toString().padStart(6,'0');
+  }
+  async function validTOTPCodes() {
+    const sec=b32decode(window._cfg?.TOTP_SECRET||'JBSWY3DPEHPK3PXP');
+    const t=Math.floor(Date.now()/1000/30);
+    return Promise.all([t-1,t,t+1].map(w=>hotp(sec,w)));
+  }
+
+  async function verifyTOTP() {
+    const boxes=[...document.querySelectorAll('.otp-b')];
+    const entered=boxes.map(b=>b.value).join('');
+    if(entered.length<6){shakeOTP();return;}
+    document.getElementById('otp-err').style.display='none';
+    const valid=await validTOTPCodes();
+    if(valid.includes(entered)){
+      boxes.forEach(b=>{b.style.borderColor='var(--green)';b.style.boxShadow='0 0 0 3px rgba(34,197,94,.15)';});
+      setTimeout(()=>{
+        showPage('admin');
+        loadOrders();
+        checkLockdownStatus();
+      },500);
+    } else {
+      shakeOTP();
+      document.getElementById('otp-err').style.display='block';
+      boxes.forEach(b=>b.value='');
+      boxes[0].focus();
+    }
+  }
+
+  function shakeOTP(){
+    document.querySelectorAll('.otp-b').forEach(b=>{
+      b.classList.remove('err');void b.offsetWidth;b.classList.add('err');
+      setTimeout(()=>b.classList.remove('err'),420);
+    });
+  }
+
+  function initOTPBoxes(){
+    const boxes=[...document.querySelectorAll('.otp-b')];
+    boxes.forEach((b,i)=>{
+      b.addEventListener('input',e=>{
+        const v=e.target.value.replace(/\D/g,'');
+        b.value=v?v[0]:'';
+        b.classList.toggle('filled',!!b.value);
+        if(b.value&&i<boxes.length-1)boxes[i+1].focus();
+        if(i===boxes.length-1&&b.value)verifyTOTP();
+      });
+      b.addEventListener('keydown',e=>{
+        if(e.key==='Backspace'&&!b.value&&i>0){boxes[i-1].focus();boxes[i-1].value='';boxes[i-1].classList.remove('filled');}
+        if(e.key==='Enter')verifyTOTP();
+        if(e.key==='ArrowLeft'&&i>0)boxes[i-1].focus();
+        if(e.key==='ArrowRight'&&i<boxes.length-1)boxes[i+1].focus();
+      });
+      b.addEventListener('paste',e=>{
+        e.preventDefault();
+        const t=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+        [...t.slice(0,6)].forEach((c,j)=>{if(boxes[j]){boxes[j].value=c;boxes[j].classList.add('filled');}});
+        const nx=Math.min(t.length,5);boxes[nx].focus();
+        if(t.length>=6)verifyTOTP();
+      });
+    });
+    setTimeout(()=>boxes[0].focus(),100);
+  }
+
+  function initRing(){
+    function upd(){
+      const now=Math.floor(Date.now()/1000);
+      const rem=30-(now%30);
+      const pct=rem/30;
+      const circ=2*Math.PI*18;
+      const ring=document.getElementById('totp-ring');
+      const cnt=document.getElementById('totp-cnt');
+      if(ring){ring.setAttribute('stroke-dashoffset',circ*(1-pct));ring.setAttribute('stroke',rem<=5?'var(--red)':'var(--purple)');}
+      if(cnt)cnt.textContent=rem;
+    }
+    upd();setInterval(upd,1000);
+  }
+
+  function initSetupQR(){
+    const sec=window._cfg?.TOTP_SECRET||'JBSWY3DPEHPK3PXP';
+    const uri=`otpauth://totp/AgeVerify%20Admin:admin%40ageverify?secret=${sec}&issuer=AgeVerify%20Admin&algorithm=SHA1&digits=6&period=30`;
+    const img=document.createElement('img');
+    img.src=`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(uri)}`;
+    img.alt='TOTP QR';img.style.cssText='display:block;border-radius:4px;';
+    document.getElementById('setup-qr').appendChild(img);
+    document.getElementById('setup-secret').textContent=sec;
+  }
+
+  function adminLogout(){
+    showPage('admin-login');
+    document.querySelectorAll('.otp-b').forEach(b=>{b.value='';b.classList.remove('filled');b.style.borderColor='';b.style.boxShadow='';});
+    document.getElementById('otp-err').style.display='none';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN — ORDERS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const statusBadge = {
+    pending:           '<span class="badge b-gray">Pending</span>',
+    payment_declined:  '<span class="badge b-red">Payment Declined</span>',
+    payment_accepted:  '<span class="badge b-blue">Payment Accepted</span>',
+    finished:          '<span class="badge b-green">Finished</span>',
+    cancelled:         '<span class="badge b-red">Cancelled</span>',
+  };
+  const payBadge = {
+    roblox:   '<span class="badge b-purple">Roblox GC</span>',
+    nitro:    '<span class="badge b-blue">Nitro</span>',
+    steam:    '<span class="badge b-green">Steam GC</span>',
+    wishlist: '<span class="badge b-orange">Wishlist</span>',
+  };
+
+  async function loadOrders(){
+    const el=document.getElementById('orders-list');
+    el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">Loading…</div>';
+    if(!window._db){el.innerHTML='<div style="padding:1.5rem;color:#fca5a5;text-align:center">Firebase not configured.</div>';return;}
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      if(snap.empty){el.innerHTML='<div style="padding:1.5rem;color:var(--muted);text-align:center">No orders yet.</div>';return;}
+      const docs=[];snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+      docs.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+      el.innerHTML='';
+      docs.forEach(o=>{
+        const ts=o.createdAt?new Date(o.createdAt.seconds*1000).toLocaleString():'—';
+        const div=document.createElement('div');
+        div.className='order-row';
+        div.innerHTML=`
+          <div class="order-header" onclick="toggleOrder('${o.id}')">
+            <div class="order-num-col">${o.orderNum||o.id}</div>
+            <div class="order-email-col">${o.email||'—'}</div>
+            <div class="order-status">
+              ${statusBadge[o.status]||statusBadge.pending}
+              ${payBadge[o.payment]||''}
+            </div>
+            <span class="chevron" id="chev-${o.id}">▼</span>
+          </div>
+          <div class="order-details" id="det-${o.id}">
+            <div class="det-grid">
+              <div class="det-item"><div class="det-key">Username 1</div><div class="det-val">${o.username1||'—'}</div></div>
+              <div class="det-item"><div class="det-key">Username 2</div><div class="det-val">${o.username2||'—'}</div></div>
+              <div class="det-item"><div class="det-key">Username 3</div><div class="det-val">${o.username3||'—'}</div></div>
+              <div class="det-item"><div class="det-key">Age Group</div><div class="det-val">${o.ageGroup||'—'}</div></div>
+              <div class="det-item"><div class="det-key">Payment</div><div class="det-val">${o.payment||'—'}</div></div>
+              <div class="det-item"><div class="det-key det-key-code">Payment Code</div><div class="det-val">${o.payCode||'—'}</div></div>
+              <div class="det-item"><div class="det-key">IP</div><div class="det-val">${o.ip||'—'}</div></div>
+              <div class="det-item"><div class="det-key">Ordered At</div><div class="det-val">${ts}</div></div>
+            </div>
+          </div>`;
+        el.appendChild(div);
+      });
+    } catch(e){
+      el.innerHTML=`<div style="padding:1.5rem;color:#fca5a5;text-align:center">Error: ${e.message}</div>`;
+    }
+  }
+
+  function toggleOrder(id){
+    const det=document.getElementById('det-'+id);
+    const chev=document.getElementById('chev-'+id);
+    const open=det.classList.toggle('open');
+    chev.classList.toggle('open',open);
+  }
+
+  // ── Notification type change handler ──────────────────────────────────────
+  document.getElementById('notif-type').addEventListener('change', function(){
+    document.getElementById('finished-fields').style.display = this.value==='finished'?'block':'none';
+    document.getElementById('cancel-order-btn').style.display = this.value==='payment_declined'?'inline-flex':'none';
+  });
+
+  async function sendNotification(){
+    const orderNum=document.getElementById('notif-order').value.trim();
+    const type=document.getElementById('notif-type').value;
+    if(!orderNum||!type){toast('Please fill in order number and notification type.','red');return;}
+
+    // Find order in Firestore
+    if(!window._db){toast('Firebase not configured.','red');return;}
+    let orderData=null;
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      snap.forEach(d=>{if(d.data().orderNum===orderNum)orderData={id:d.id,...d.data()};});
+    } catch(e){toast('Error fetching order: '+e.message,'red');return;}
+    if(!orderData){toast('Order not found.','red');return;}
+
+    const emailParams={
+      to_email: orderData.email,
+      order_num: orderData.orderNum,
+      age_group: orderData.ageGroup,
+      payment_method: orderData.payment,
+    };
+
+    if(type==='finished'){
+      emailParams.roblox_username=document.getElementById('fin-user').value.trim();
+      emailParams.roblox_password=document.getElementById('fin-pass').value.trim();
+      emailParams.account_email=document.getElementById('fin-email').value.trim();
+      emailParams.notes=document.getElementById('fin-notes').value.trim();
+      if(!emailParams.roblox_username||!emailParams.roblox_password){
+        toast('Please fill in at least username and password for the Finished email.','red');return;
+      }
+    }
+
+    await sendEmail(type, emailParams);
+
+    // Update order status in Firestore
+    try {
+      await window._fns.updateDoc(window._fns.doc(window._db,'orders',orderData.id),{status:type});
+    } catch(e){console.warn('Status update failed:',e);}
+
+    toast(`✅ "${type}" notification sent to ${orderData.email}`, 'green');
+    loadOrders();
+  }
+
+  async function cancelOrder(){
+    const orderNum=document.getElementById('notif-order').value.trim();
+    if(!orderNum){toast('Enter an order number.','red');return;}
+    if(!window._db)return;
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      let did=null;
+      snap.forEach(d=>{if(d.data().orderNum===orderNum)did=d.id;});
+      if(!did){toast('Order not found.','red');return;}
+      await window._fns.updateDoc(window._fns.doc(window._db,'orders',did),{status:'cancelled'});
+      toast('Order marked as cancelled.','green');
+      loadOrders();
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  // ── IP Ban ────────────────────────────────────────────────────────────────
+  async function banIP(){
+    const orderNum=document.getElementById('ban-order').value.trim();
+    if(!orderNum){toast('Enter an order number.','red');return;}
+    if(!window._db)return;
+    let ip=null;
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      snap.forEach(d=>{if(d.data().orderNum===orderNum)ip=d.data().ip;});
+    } catch(e){}
+    if(!ip||ip==='unknown'){toast('IP not found for this order.','red');return;}
+    try {
+      await window._fns.setDoc(window._fns.doc(window._db,'bans',ip),{orderNum,bannedAt:window._fns.serverTimestamp()});
+      document.getElementById('ban-result').textContent=`✅ IP ${ip} banned.`;
+      toast('IP banned: '+ip,'green');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  async function unbanIP(){
+    const orderNum=document.getElementById('ban-order').value.trim();
+    if(!orderNum){toast('Enter an order number.','red');return;}
+    if(!window._db)return;
+    let ip=null;
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      snap.forEach(d=>{if(d.data().orderNum===orderNum)ip=d.data().ip;});
+    } catch(e){}
+    if(!ip){toast('IP not found.','red');return;}
+    try {
+      await window._fns.deleteDoc(window._fns.doc(window._db,'bans',ip));
+      document.getElementById('ban-result').textContent=`✅ IP ${ip} unbanned.`;
+      toast('IP unbanned: '+ip,'green');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  // ── Lockdown ──────────────────────────────────────────────────────────────
+  const unitMs={minutes:60e3,hours:36e5,days:864e5,weeks:6048e5,months:2592e6,years:31536e6};
+
+  async function checkLockdownStatus(){
+    if(!window._db)return;
+    const el=document.getElementById('lockdown-status');
+    try {
+      const d=await window._fns.getDoc(window._fns.doc(window._db,'settings','lockdown'));
+      if(d.exists()){
+        const {until}=d.data();
+        const ms=until?.toMillis?until.toMillis():until;
+        if(ms>Date.now()){
+          el.innerHTML=`<div class="lockdown-active-badge">🔴 ACTIVE — expires ${new Date(ms).toLocaleString()}</div>`;
+          return;
+        }
+      }
+      el.innerHTML=`<div style="font-size:.8rem;color:var(--muted)">No active lockdown.</div>`;
+    } catch(e){}
+  }
+
+  async function activateLockdown(){
+    const amount=parseInt(document.getElementById('lock-amount').value)||0;
+    const unit=document.getElementById('lock-unit').value;
+    if(amount<=0){toast('Enter a valid duration.','red');return;}
+    const until=new Date(Date.now()+amount*unitMs[unit]);
+    if(!window._db)return;
+    try {
+      await window._fns.setDoc(window._fns.doc(window._db,'settings','lockdown'),{
+        until:window._fns.serverTimestamp(),
+        untilMs:until.getTime(),
+        setAt:window._fns.serverTimestamp()
+      });
+      // Use exact time
+      await window._fns.setDoc(window._fns.doc(window._db,'settings','lockdown'),{until:until.getTime()});
+      toast(`🔒 Lockdown active until ${until.toLocaleString()}`,'green');
+      checkLockdownStatus();
+      document.getElementById('lockdown-banner').style.display='block';
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  async function liftLockdown(){
+    if(!window._db)return;
+    try {
+      await window._fns.deleteDoc(window._fns.doc(window._db,'settings','lockdown'));
+      toast('Lockdown lifted.','green');
+      checkLockdownStatus();
+      document.getElementById('lockdown-banner').style.display='none';
+      sessionStorage.removeItem('lockdown');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let _toastTimer;
+  function toast(msg, type='default'){
+    const el=document.getElementById('toast');
+    el.textContent=msg;
+    el.style.borderColor=type==='red'?'rgba(239,68,68,.35)':type==='green'?'rgba(34,197,94,.3)':'var(--border)';
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer=setTimeout(()=>el.classList.remove('show'),3600);
+  }
+</script>
+</body>
+</html>
