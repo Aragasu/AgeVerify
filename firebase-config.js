@@ -16,18 +16,16 @@ const firebaseConfig = {
 // Sign up at https://emailjs.com (free tier: 200 emails/month)
 // See README.md for full setup instructions.
 export const emailjsConfig = {
-  publicKey:                "YOUR_EMAILJS_PUBLIC_KEY",
-  serviceId:                "YOUR_EMAILJS_SERVICE_ID",
-  orderConfirmTemplateId:   "YOUR_TEMPLATE_ORDER_CONFIRM",
-  paymentDeclinedTemplateId:"YOUR_TEMPLATE_PAYMENT_DECLINED",
-  paymentAcceptedTemplateId:"YOUR_TEMPLATE_PAYMENT_ACCEPTED",
-  finishedTemplateId:       "YOUR_TEMPLATE_FINISHED",
+  publicKey:                "grdrX5_Wbe2ZLPBRy",
+  serviceId:                "service_hfh7huu",
+  orderConfirmTemplateId:   "order_confirm",
+  adminNotifTemplateId:     "admin_l2dtgxx",
 };
 
 // ── TOTP Secret ───────────────────────────────────────────────────────────────
 // Generate your own at https://it-tools.tech/otp-generator (Base32, 16+ chars)
 // After changing this, re-scan the QR code on the admin login page.
-export const TOTP_SECRET = "JBSWY3DPEHPK3PXP"; // ← CHANGE THIS
+export const TOTP_SECRET = "7XJJHIVF3X2PNV4U"; // ← CHANGE THIS
 
 // ── Admin URL slug ────────────────────────────────────────────────────────────
 // Admin panel is only accessible at /?admin  (or yoursite.com/?admin)
