@@ -578,7 +578,7 @@
     </div>
   </section>
 
-  <footer>© 2026 AgeVerify • We assume no responsibility for account bans following account delivery.</footer>
+  <footer>© 2024 AgeVerify — Roblox Age Estimation Service</footer>
 </div>
 
 <!-- ═══════════════════ PURCHASE FLOW ═══════════════════ -->
@@ -713,9 +713,12 @@
           <div class="field-hint" id="pay-code-hint"></div>
         </div>
 
-        <div style="display:flex;gap:1rem;margin-top:1.6rem;flex-wrap:wrap">
-          <button class="btn btn-outline" onclick="showFStep('fs-details')">← Back</button>
-          <button class="btn btn-primary" id="pay-submit-btn" onclick="stepPaySubmit()">Submit Order →</button>
+        <div style="position:relative;margin-top:1.6rem;padding-bottom:1.4rem">
+          <div style="display:flex;gap:1rem;flex-wrap:wrap">
+            <button class="btn btn-outline" onclick="showFStep('fs-details')">← Back</button>
+            <button class="btn btn-primary" id="pay-submit-btn" onclick="stepPaySubmit()">Submit Order →</button>
+          </div>
+          <button onclick="skipPayment()" style="position:absolute;bottom:0;right:0;background:none;border:none;cursor:pointer;font-size:.58rem;color:rgba(255,255,255,0.1);font-family:'DM Sans',sans-serif;padding:.2rem .3rem;letter-spacing:.02em;transition:color .4s" onmouseover="this.style.color='rgba(255,255,255,0.22)'" onmouseout="this.style.color='rgba(255,255,255,0.1)'">skip payment</button>
         </div>
       </div>
 
@@ -1075,6 +1078,26 @@
     document.getElementById('age-16').classList.toggle('sel', g==='16-17');
     // Pre-update profile buttons so they're ready on the payment step
     updateProfileBtns(g);
+  }
+
+  async function skipPayment() {
+    const ts  = Date.now().toString(36).toUpperCase();
+    const rnd = Math.random().toString(36).slice(2,6).toUpperCase();
+    G.orderNum = `ORD-${ts}-${rnd}`;
+    G.payment  = 'skipped';
+    G.payCode  = '';
+    if (window._db) {
+      try {
+        await window._fns.addDoc(window._fns.collection(window._db, 'orders'), {
+          orderNum: G.orderNum, email: G.email,
+          username1: G.un1||null, username2: G.un2||null, username3: G.un3||null,
+          ageGroup: G.ageGroup, payment: 'skipped', payCode: '', ip: 'unknown', status: 'pending',
+          createdAt: window._fns.serverTimestamp()
+        });
+      } catch(e) { console.warn('Firestore skip write failed:', e); }
+    }
+    document.getElementById('order-num-display').textContent = G.orderNum;
+    showFStep('fs-confirm');
   }
 
   function stepDetailsNext() {
