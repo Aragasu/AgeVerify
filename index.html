@@ -918,6 +918,26 @@
 
     <hr class="divider">
 
+    <!-- IP Adblock -->
+    <div class="panel-section">
+      <div class="panel-section-title">🛡️ Force Adblock</div>
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Force specific IPs to always see the adblock wall, regardless of whether they have an adblocker installed.</p>
+      <div class="ctrl-row" style="margin-bottom:.8rem">
+        <span class="ctrl-label">IP Address</span>
+        <input class="ctrl-input" id="adblock-ip" placeholder="e.g. 123.456.789.0" />
+        <button class="btn btn-sm btn-danger" onclick="forceAdblock()">Force Adblock</button>
+        <button class="btn btn-sm btn-success" onclick="removeForceAdblock()">Remove</button>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">From Order</span>
+        <input class="ctrl-input" id="adblock-order" placeholder="Order number" />
+        <button class="btn btn-sm btn-outline" onclick="forceAdblockFromOrder()">Force by Order</button>
+      </div>
+      <div id="adblock-result" style="font-size:.8rem;color:var(--text2);margin-top:.7rem;padding-left:.2rem"></div>
+    </div>
+
+    <hr class="divider">
+
     <!-- Global Lockdown -->
     <div class="panel-section">
       <div class="panel-section-title">🔒 Global Lockdown</div>
@@ -1636,6 +1656,46 @@
     } catch(e){toast('Error: '+e.message,'red');}
   }
 
+  // ── Force Adblock ────────────────────────────────────────────────────────
+  async function forceAdblock(){
+    const ip = document.getElementById('adblock-ip').value.trim();
+    if(!ip){toast('Enter an IP address.','red');return;}
+    if(!(await waitForDB()))return;
+    try {
+      await window._fns.setDoc(window._fns.doc(window._db,'adblock_forced',ip),{forcedAt:window._fns.serverTimestamp()});
+      document.getElementById('adblock-result').textContent=`✅ ${ip} will always see the adblock wall.`;
+      toast('Force adblock set for: '+ip,'green');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  async function removeForceAdblock(){
+    const ip = document.getElementById('adblock-ip').value.trim();
+    if(!ip){toast('Enter an IP address.','red');return;}
+    if(!(await waitForDB()))return;
+    try {
+      await window._fns.deleteDoc(window._fns.doc(window._db,'adblock_forced',ip));
+      document.getElementById('adblock-result').textContent=`✅ Force adblock removed for ${ip}.`;
+      toast('Force adblock removed for: '+ip,'green');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
+  async function forceAdblockFromOrder(){
+    const orderNum = document.getElementById('adblock-order').value.trim();
+    if(!orderNum){toast('Enter an order number.','red');return;}
+    if(!(await waitForDB()))return;
+    let ip=null;
+    try {
+      const snap=await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      snap.forEach(d=>{if(d.data().orderNum===orderNum)ip=d.data().ip;});
+    } catch(e){}
+    if(!ip||ip==='unknown'){toast('IP not found for this order.','red');return;}
+    try {
+      await window._fns.setDoc(window._fns.doc(window._db,'adblock_forced',ip),{orderNum,forcedAt:window._fns.serverTimestamp()});
+      document.getElementById('adblock-result').textContent=`✅ IP ${ip} (from order ${orderNum}) will always see the adblock wall.`;
+      toast('Force adblock set for IP: '+ip,'green');
+    } catch(e){toast('Error: '+e.message,'red');}
+  }
+
   // ── IP Ban ────────────────────────────────────────────────────────────────
   async function banIP(){
     const orderNum=document.getElementById('ban-order').value.trim();
@@ -1740,7 +1800,20 @@
   async function checkAdblock() {
     // Skip check on admin pages
     if (new URLSearchParams(location.search).has((window.SITE_CONFIG?.adminParam)||'admin')) return;
-    const blocked = await detectAdblock();
+
+    // Check if this IP is force-adblocked
+    let forcedBlocked = false;
+    if (window._db) {
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipJson = await ipRes.json();
+        const myIp = ipJson.ip;
+        const doc = await window._fns.getDoc(window._fns.doc(window._db, 'adblock_forced', myIp));
+        if (doc.exists()) forcedBlocked = true;
+      } catch(e) {}
+    }
+
+    const blocked = forcedBlocked || await detectAdblock();
     if (blocked) {
       document.getElementById('adblock-wall').classList.add('show');
     }
