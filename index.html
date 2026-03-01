@@ -1048,9 +1048,17 @@
     const params = new URLSearchParams(location.search);
     if (params.has(adminParam)) {
       document.querySelectorAll('.nav-link').forEach(l => l.style.display='none');
-      showPage('admin-login');
-      initOTPBoxes();
-      initRing();
+      const adminAuth = sessionStorage.getItem('admin_auth');
+      if (adminAuth && Date.now() < parseInt(adminAuth)) {
+        // Still within 2-hour session — skip login
+        showPage('admin');
+        setTimeout(() => { loadOrders(); checkLockdownStatus(); }, 300);
+      } else {
+        sessionStorage.removeItem('admin_auth');
+        showPage('admin-login');
+        initOTPBoxes();
+        initRing();
+      }
       return;
     }
     checkLockdownBanner();
@@ -1401,6 +1409,7 @@
     console.log('[TOTP] entered:', entered, '| match:', valid.includes(entered));
     if (valid.includes(entered)) {
       boxes.forEach(b => { b.style.borderColor = 'var(--green)'; b.style.boxShadow = '0 0 0 3px rgba(34,197,94,.15)'; });
+      sessionStorage.setItem('admin_auth', Date.now() + 2 * 60 * 60 * 1000); // 2 hours
       setTimeout(() => {
         showPage('admin');
         loadOrders();
@@ -1464,6 +1473,7 @@
 
 
   function adminLogout(){
+    sessionStorage.removeItem('admin_auth');
     showPage('admin-login');
     document.querySelectorAll('.otp-b').forEach(b=>{b.value='';b.classList.remove('filled');b.style.borderColor='';b.style.boxShadow='';});
     document.getElementById('otp-err').style.display='none';
@@ -1798,22 +1808,27 @@
   }
 
   async function checkAdblock() {
-    // Skip check on admin pages
+    // Skip on admin pages
     if (new URLSearchParams(location.search).has((window.SITE_CONFIG?.adminParam)||'admin')) return;
+    // Skip if already whitelisted this session
+    if (sessionStorage.getItem('ad_whitelist') === '1') return;
 
-    // Check if this IP is force-adblocked
-    let forcedBlocked = false;
+    // Check Firestore whitelist — whitelisted IPs skip ads AND the adblock wall
     if (window._db) {
       try {
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const ipJson = await ipRes.json();
         const myIp = ipJson.ip;
         const doc = await window._fns.getDoc(window._fns.doc(window._db, 'ad_whitelist', myIp));
-        if (doc.exists()) forcedBlocked = true;
+        if (doc.exists()) {
+          sessionStorage.setItem('ad_whitelist', '1');
+          return; // whitelisted — no ads, no adblock wall
+        }
       } catch(e) {}
     }
 
-    const blocked = forcedBlocked || await detectAdblock();
+    // Only non-whitelisted IPs reach here
+    const blocked = await detectAdblock();
     if (blocked) {
       document.getElementById('adblock-wall').classList.add('show');
     }
