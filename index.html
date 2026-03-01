@@ -7,6 +7,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
   <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Monetag Popunder -->
+  <script>(function(s){s.dataset.zone='10669621',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+  <!-- Monetag Vignette Banner -->
+  <script>(function(s){s.dataset.zone='10669632',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
   <style>
     :root {
@@ -492,6 +496,67 @@
       color:#fca5a5;letter-spacing:.06em;
     }
 
+    /* ── AD SHELL ── */
+    .ad-shell {
+      position:relative;border:1px solid var(--border);
+      border-radius:14px;overflow:hidden;
+      background:var(--bg2);min-height:280px;
+    }
+    .ad-placeholder {
+      width:100%;height:280px;
+    }
+    .ad-overlay {
+      position:absolute;inset:0;
+      background:rgba(7,7,9,0.82);backdrop-filter:blur(6px);
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:.9rem;
+      border-radius:14px;
+    }
+    .ad-timer-wrap {
+      position:relative;display:flex;
+      align-items:center;justify-content:center;
+    }
+    .ad-done {
+      position:absolute;inset:0;
+      background:rgba(7,7,9,0.92);backdrop-filter:blur(8px);
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      border-radius:14px;
+    }
+
+    /* ── MODAL ── */
+    .modal-backdrop {
+      position:fixed;inset:0;z-index:900;
+      background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);
+      display:flex;align-items:center;justify-content:center;padding:1.5rem;
+      animation:fadeIn .2s ease;
+    }
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal-box {
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:16px;padding:2.2rem;width:100%;max-width:420px;
+      animation:slideUp .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .modal-icon { font-size:2.4rem;margin-bottom:1rem;text-align:center; }
+    .modal-title {
+      font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:700;
+      letter-spacing:-.02em;margin-bottom:.6rem;text-align:center;
+    }
+    .modal-body { font-size:.84rem;color:var(--text2);line-height:1.7;text-align:center;margin-bottom:1.6rem; }
+    .modal-btns { display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap; }
+    .modal-step { font-family:'Unbounded',sans-serif;font-size:.58rem;
+      color:var(--muted);letter-spacing:.12em;text-align:center;margin-bottom:1.2rem; }
+
+    /* ── ADBLOCK OVERLAY ── */
+    #adblock-wall {
+      display:none;position:fixed;inset:0;z-index:1000;
+      background:var(--bg);
+      flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:2rem;
+    }
+    #adblock-wall.show { display:flex; }
+
     footer {
       text-align:center;padding:2rem;font-size:.74rem;color:var(--muted);
       border-top:1px solid var(--border);position:relative;z-index:1;
@@ -662,63 +727,46 @@
           <div class="pt on"></div><div class="pt on"></div><div class="pt on"></div><div class="pt"></div>
         </div>
         <div class="flow-head">
-          <h2>Payment</h2>
-          <p>Choose a payment method and enter your code below.</p>
+          <h2>One Last Step</h2>
+          <p>Watch a short ad to complete your order — this is how we keep the service free.</p>
         </div>
 
-        <div class="info-box">
-          💜 <strong>Why no real payments?</strong> Since we're both minors, we can't legally accept real-money payments. Instead we accept gift cards and digital items as compensation.
+        <div class="info-box" style="margin-bottom:1.4rem">
+          💜 <strong>Why no real payments?</strong> We're both minors and legally can't accept real-money transactions. Watching a short ad is our way of keeping this service running — thanks for understanding!
         </div>
 
-        <div class="pay-grid">
-          <div class="pay-card" id="pay-roblox" onclick="selPay('roblox')">
-            <div class="pay-icon">🎮</div>
-            <div>
-              <div class="pay-label">Roblox Gift Card</div>
-              <div class="pay-hint">Any amount. Enter the card code below.</div>
+        <div class="ad-shell" id="ad-shell">
+          <!-- Ad container — replace the comment below with your Monetag ad code -->
+          <div class="ad-placeholder" id="ad-placeholder">
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:.8rem;color:var(--muted)">
+              <div style="font-size:2rem">💜</div>
+              <div style="font-family:'Unbounded',sans-serif;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--purple-light)">Thanks for supporting us!</div>
+              <div style="font-size:.8rem;text-align:center;max-width:280px;line-height:1.6">An ad has opened in the background. This keeps our service free.</div>
             </div>
           </div>
-          <div class="pay-card" id="pay-nitro" onclick="selPay('nitro')">
-            <div class="pay-icon">💜</div>
-            <div style="width:100%">
-              <div class="pay-label">Discord Nitro</div>
-              <div class="pay-hint" id="nitro-hint">Gift Nitro directly to the right Discord profile based on your age group.</div>
-              <div class="profile-btns" id="nitro-btns" onclick="event.stopPropagation()" style="display:none;margin-top:.7rem;gap:.5rem;flex-wrap:wrap">
-                <a class="profile-btn profile-btn-discord" id="nitro-primary-btn" href="#" target="_blank">💜 —</a>
-              </div>
+
+          <div class="ad-overlay" id="ad-overlay">
+            <div class="ad-timer-wrap">
+              <svg width="48" height="48" viewBox="0 0 48 48">
+                <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(155,93,229,.2)" stroke-width="3"/>
+                <circle cx="24" cy="24" r="20" fill="none" stroke="var(--purple)" stroke-width="3"
+                  id="ad-ring" stroke-dasharray="125.7" stroke-dashoffset="0" stroke-linecap="round"
+                  transform="rotate(-90 24 24)" style="transition:stroke-dashoffset 1s linear"/>
+              </svg>
+              <span id="ad-countdown" style="position:absolute;font-family:'Unbounded',sans-serif;font-size:.95rem;font-weight:700;color:var(--text)">30</span>
             </div>
+            <div style="font-size:.75rem;color:var(--text2);font-family:'Unbounded',sans-serif;letter-spacing:.06em">PLEASE WAIT</div>
           </div>
-          <div class="pay-card" id="pay-steam" onclick="selPay('steam')">
-            <div class="pay-icon">🎮</div>
-            <div>
-              <div class="pay-label">Steam Gift Card</div>
-              <div class="pay-hint">Any amount. Enter the card code below.</div>
-            </div>
-          </div>
-          <div class="pay-card" id="pay-wishlist" onclick="selPay('wishlist')">
-            <div class="pay-icon">⭐</div>
-            <div style="width:100%">
-              <div class="pay-label">Steam Wishlist Item</div>
-              <div class="pay-hint" id="wishlist-hint">Gift a game from the right wishlist based on your age group, then enter the confirmation code.</div>
-              <div class="profile-btns" id="wishlist-btns" onclick="event.stopPropagation()" style="display:none;margin-top:.7rem;gap:.5rem;flex-wrap:wrap">
-                <a class="profile-btn profile-btn-steam" id="wishlist-primary-btn" href="#" target="_blank">🎮 —</a>
-              </div>
-            </div>
+
+          <div class="ad-done" id="ad-done" style="display:none">
+            <div style="font-size:1.8rem;margin-bottom:.8rem">✅</div>
+            <div style="font-family:'Unbounded',sans-serif;font-size:.8rem;font-weight:700;margin-bottom:1.4rem;color:var(--text)">Thanks for watching!</div>
+            <button class="btn btn-primary" onclick="stepAdSubmit()">Complete Order →</button>
           </div>
         </div>
 
-        <div class="field" id="pay-code-wrap" style="display:none">
-          <label class="field-label" id="pay-code-label">Gift Card Code</label>
-          <input class="field-input" id="pay-code" type="text" placeholder="Enter code here…" />
-          <div class="field-hint" id="pay-code-hint"></div>
-        </div>
-
-        <div style="position:relative;margin-top:1.6rem;padding-bottom:1.4rem">
-          <div style="display:flex;gap:1rem;flex-wrap:wrap">
-            <button class="btn btn-outline" onclick="showFStep('fs-details')">← Back</button>
-            <button class="btn btn-primary" id="pay-submit-btn" onclick="stepPaySubmit()">Submit Order →</button>
-          </div>
-          <button onclick="skipPayment()" style="position:absolute;bottom:0;right:0;background:none;border:none;cursor:pointer;font-size:.58rem;color:rgba(255,255,255,0.1);font-family:'DM Sans',sans-serif;padding:.2rem .3rem;letter-spacing:.02em;transition:color .4s" onmouseover="this.style.color='rgba(255,255,255,0.22)'" onmouseout="this.style.color='rgba(255,255,255,0.1)'">skip payment</button>
+        <div style="margin-top:1.4rem">
+          <button class="btn btn-outline btn-sm" id="ad-back-btn" onclick="showFStep('fs-details')">← Back</button>
         </div>
       </div>
 
@@ -800,6 +848,7 @@
         <button class="btn btn-outline btn-sm" onclick="loadOrders()">↻ Refresh</button>
         <button class="btn btn-outline btn-sm view-archive-btn" id="archive-toggle-btn" onclick="toggleArchiveView()">📦 Archive</button>
         <span id="archive-view-label" style="font-size:.72rem;color:var(--muted);font-family:'Unbounded',sans-serif;letter-spacing:.06em;display:none">VIEWING ARCHIVE</span>
+        <button class="btn btn-sm btn-danger" id="del-archived-btn" style="display:none" onclick="startDeleteArchived()">🗑 Delete All Archived</button>
       </div>
       <div id="orders-list" class="orders-list">
         <div style="text-align:center;padding:2rem;color:var(--muted)">Loading orders…</div>
@@ -969,6 +1018,9 @@
   // The Firebase module runs async but _db is only needed when actions are taken,
   // not at boot time, so no timing issue there.
   document.addEventListener('DOMContentLoaded', () => {
+    // Run adblock check after a short delay (let ads scripts attempt to load first)
+    setTimeout(checkAdblock, 800);
+
     const adminParam = (window.SITE_CONFIG && window.SITE_CONFIG.adminParam) || 'admin';
     const params = new URLSearchParams(location.search);
     if (params.has(adminParam)) {
@@ -1080,25 +1132,6 @@
     updateProfileBtns(g);
   }
 
-  async function skipPayment() {
-    const ts  = Date.now().toString(36).toUpperCase();
-    const rnd = Math.random().toString(36).slice(2,6).toUpperCase();
-    G.orderNum = `ORD-${ts}-${rnd}`;
-    G.payment  = 'skipped';
-    G.payCode  = '';
-    if (window._db) {
-      try {
-        await window._fns.addDoc(window._fns.collection(window._db, 'orders'), {
-          orderNum: G.orderNum, email: G.email,
-          username1: G.un1||null, username2: G.un2||null, username3: G.un3||null,
-          ageGroup: G.ageGroup, payment: 'skipped', payCode: '', ip: 'unknown', status: 'pending',
-          createdAt: window._fns.serverTimestamp()
-        });
-      } catch(e) { console.warn('Firestore skip write failed:', e); }
-    }
-    document.getElementById('order-num-display').textContent = G.orderNum;
-    showFStep('fs-confirm');
-  }
 
   function stepDetailsNext() {
     if (!G.ageGroup) { toast('Please select an age group.', 'red'); return; }
@@ -1107,34 +1140,43 @@
     G.un3 = document.getElementById('un3').value.trim();
     updateProfileBtns(G.ageGroup);
     showFStep('fs-payment');
+    // Start the 30s ad timer when the payment step appears
+    setTimeout(startAdTimer, 100);
   }
 
-  const payHints = {
-    roblox:   ['Roblox Gift Card Code', 'Found on the back of the card or in your email.', 'RBXCARD1234-XXXX'],
-    nitro:    ['Discord Nitro Gift Code', 'From Discord or a third-party seller — starts with discord.gift/ or is a standalone code.', 'discord.gift/XXXX or standalone code'],
-    steam:    ['Steam Wallet Code', 'Found on the back of the card or in your purchase email.', 'XXXXX-XXXXX-XXXXX'],
-    wishlist: ['Gift Confirmation Code', 'After gifting us a Steam game, enter the confirmation/order number here.', 'Steam order/confirmation number'],
-  };
+  // ── AD TIMER ─────────────────────────────────────────────────────────────────
+  let _adTimer = null;
 
-  function selPay(p) {
-    G.payment = p;
-    ['roblox','nitro','steam','wishlist'].forEach(k => {
-      document.getElementById('pay-'+k).classList.toggle('sel', k===p);
-    });
-    const [label, hint, placeholder] = payHints[p];
-    document.getElementById('pay-code-label').textContent = label;
-    document.getElementById('pay-code-hint').textContent = hint;
-    document.getElementById('pay-code').placeholder = placeholder;
-    document.getElementById('pay-code-wrap').style.display = 'block';
+  function startAdTimer() {
+    // Reset state
+    clearInterval(_adTimer);
+    document.getElementById('ad-overlay').style.display = 'flex';
+    document.getElementById('ad-done').style.display = 'none';
+    document.getElementById('ad-back-btn').disabled = true;
+    const ring = document.getElementById('ad-ring');
+    const cnt  = document.getElementById('ad-countdown');
+    const circ = 125.7;
+    let remaining = 30;
+    cnt.textContent = remaining;
+    ring.style.strokeDashoffset = '0';
+    _adTimer = setInterval(() => {
+      remaining--;
+      cnt.textContent = remaining;
+      ring.style.strokeDashoffset = circ * (1 - remaining / 30);
+      if (remaining <= 0) {
+        clearInterval(_adTimer);
+        document.getElementById('ad-overlay').style.display = 'none';
+        document.getElementById('ad-done').style.display = 'flex';
+        document.getElementById('ad-back-btn').disabled = false;
+      }
+    }, 1000);
   }
 
-  async function stepPaySubmit() {
-    if (!G.payment) { toast('Please select a payment method.', 'red'); return; }
-    const code = document.getElementById('pay-code').value.trim();
-    if (!code) { toast('Please enter your payment code.', 'red'); return; }
-    G.payCode = code;
+  async function stepAdSubmit() {
+    G.payment = 'ad';
+    G.payCode = '';
 
-    const btn = document.getElementById('pay-submit-btn');
+    const btn = document.querySelector('#ad-done .btn');
     btn.textContent = 'Submitting…'; btn.disabled = true;
 
     // Generate order number
@@ -1200,13 +1242,11 @@
   function resetPurchase() {
     Object.assign(G, {email:'',un1:'',un2:'',un3:'',ageGroup:'',payment:'',payCode:'',orderNum:''});
     document.querySelectorAll('.opt-card').forEach(c=>c.classList.remove('sel'));
-    document.querySelectorAll('.pay-card').forEach(c=>c.classList.remove('sel'));
     document.getElementById('f-email').value='';
     document.getElementById('un1').value='';
     document.getElementById('un2').value='';
     document.getElementById('un3').value='';
-    document.getElementById('pay-code').value='';
-    document.getElementById('pay-code-wrap').style.display='none';
+    clearInterval(_adTimer);
     showPage('purchase');
     showFStep('fs-email');
   }
@@ -1421,6 +1461,7 @@
     nitro:    '<span class="badge b-blue">Nitro</span>',
     steam:    '<span class="badge b-green">Steam GC</span>',
     wishlist: '<span class="badge b-orange">Wishlist</span>',
+    ad:       '<span class="badge b-purple">Ad</span>',
   };
 
   // Wait up to 5s for Firebase module to finish initialising
@@ -1441,6 +1482,7 @@
     btn.classList.toggle('active', _showingArchive);
     btn.textContent = _showingArchive ? '📋 Active Orders' : '📦 Archive';
     lbl.style.display = _showingArchive ? 'inline' : 'none';
+    document.getElementById('del-archived-btn').style.display = _showingArchive ? 'inline-flex' : 'none';
     loadOrders();
   }
 
@@ -1677,6 +1719,92 @@
     } catch(e){toast('Error: '+e.message,'red');}
   }
 
+  // ── Adblock Detection ────────────────────────────────────────────────────────
+  async function detectAdblock() {
+    // Method 1: bait element
+    const bait = document.createElement('div');
+    bait.setAttribute('class', 'ad-banner pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads ad-unit');
+    bait.setAttribute('style', 'width:1px;height:1px;position:absolute;left:-9999px;top:-9999px;');
+    document.body.appendChild(bait);
+    await new Promise(r => setTimeout(r, 150));
+    const blocked = !bait.offsetHeight || !bait.offsetWidth ||
+      window.getComputedStyle(bait).display === 'none' ||
+      window.getComputedStyle(bait).visibility === 'hidden';
+    document.body.removeChild(bait);
+    return blocked;
+  }
+
+  async function checkAdblock() {
+    // Skip check on admin pages
+    if (new URLSearchParams(location.search).has((window.SITE_CONFIG?.adminParam)||'admin')) return;
+    const blocked = await detectAdblock();
+    if (blocked) {
+      document.getElementById('adblock-wall').classList.add('show');
+    }
+  }
+
+  // ── Delete Archived — 3-step confirmation modal ───────────────────────────
+  function closeDelModal() {
+    document.getElementById('del-modal').style.display = 'none';
+  }
+
+  function startDeleteArchived() {
+    showDelModal(1);
+    document.getElementById('del-modal').style.display = 'flex';
+  }
+
+  function showDelModal(step) {
+    const box = document.getElementById('del-modal-box');
+    if (step === 1) {
+      box.innerHTML = `
+        <div class="modal-step">STEP 1 OF 3</div>
+        <div class="modal-icon">🗑️</div>
+        <div class="modal-title">Delete All Archived Orders?</div>
+        <div class="modal-body">This will permanently delete <strong style="color:var(--text)">all archived orders</strong> from Firestore. This cannot be undone.</div>
+        <div class="modal-btns">
+          <button class="btn btn-outline btn-sm" onclick="closeDelModal()">Cancel</button>
+          <button class="btn btn-danger btn-sm" onclick="showDelModal(2)">Yes, continue →</button>
+        </div>`;
+    } else if (step === 2) {
+      box.innerHTML = `
+        <div class="modal-step">STEP 2 OF 3</div>
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">Are you sure?</div>
+        <div class="modal-body">All archived order data including emails, usernames, payment codes and IPs will be <strong style="color:#fca5a5">permanently erased</strong>. There is no way to recover this.</div>
+        <div class="modal-btns">
+          <button class="btn btn-outline btn-sm" onclick="closeDelModal()">Cancel</button>
+          <button class="btn btn-danger btn-sm" onclick="showDelModal(3)">I understand, delete →</button>
+        </div>`;
+    } else if (step === 3) {
+      box.innerHTML = `
+        <div class="modal-step">STEP 3 OF 3 — FINAL CONFIRMATION</div>
+        <div class="modal-icon">🔴</div>
+        <div class="modal-title">Last chance.</div>
+        <div class="modal-body">Type <strong style="color:var(--red);font-family:'Unbounded',sans-serif;letter-spacing:.05em">DELETE</strong> to confirm.</div>
+        <input class="field-input" id="del-confirm-input" type="text" placeholder="Type DELETE here" style="margin-bottom:1.2rem;text-align:center;letter-spacing:.1em" oninput="document.getElementById('del-final-btn').disabled=this.value!=='DELETE'" />
+        <div class="modal-btns">
+          <button class="btn btn-outline btn-sm" onclick="closeDelModal()">Cancel</button>
+          <button class="btn btn-danger btn-sm" id="del-final-btn" disabled onclick="executeDeleteArchived()">🗑 Delete permanently</button>
+        </div>`;
+    }
+  }
+
+  async function executeDeleteArchived() {
+    closeDelModal();
+    if(!(await waitForDB())){toast('Firebase not configured.','red');return;}
+    try {
+      const snap = await window._fns.getDocs(window._fns.collection(window._db,'orders'));
+      const toDelete = [];
+      snap.forEach(d => { if(d.data().archived===true) toDelete.push(d.id); });
+      if(toDelete.length===0){toast('No archived orders to delete.','red');return;}
+      await Promise.all(toDelete.map(id =>
+        window._fns.deleteDoc(window._fns.doc(window._db,'orders',id))
+      ));
+      toast(`🗑 Deleted ${toDelete.length} archived order${toDelete.length>1?'s':''}.`,'green');
+      loadOrders();
+    } catch(e) { toast('Error: '+e.message,'red'); }
+  }
+
   // ── Toast ─────────────────────────────────────────────────────────────────
   let _toastTimer;
   function toast(msg, type='default'){
@@ -1688,5 +1816,26 @@
     _toastTimer=setTimeout(()=>el.classList.remove('show'),3600);
   }
 </script>
+
+<!-- ── ADBLOCK WALL ── -->
+<div id="adblock-wall">
+  <div style="font-size:3.5rem;margin-bottom:1.2rem">🚫</div>
+  <h2 style="font-family:'Unbounded',sans-serif;font-size:clamp(1.2rem,3vw,1.8rem);font-weight:800;letter-spacing:-.025em;margin-bottom:.8rem">Ad Blocker Detected</h2>
+  <p style="font-size:.9rem;color:var(--text2);max-width:440px;line-height:1.75;margin-bottom:2rem">
+    Our service is run by 2 minors who can't accept real payments.<br>
+    Ads are the <strong style="color:var(--text)">only way we earn anything</strong> from this.<br><br>
+    Please disable your ad blocker for <strong style="color:var(--purple-light)">ageverify.aragasu.xyz</strong> and refresh the page.
+  </p>
+  <button class="btn btn-primary" onclick="location.reload()">I disabled it — Refresh</button>
+  <p style="margin-top:1.2rem;font-size:.75rem;color:var(--muted)">The site will not work with an ad blocker enabled.</p>
+</div>
+
+<!-- ── CONFIRMATION MODAL ── -->
+<div class="modal-backdrop" id="del-modal" style="display:none" onclick="if(event.target===this)closeDelModal()">
+  <div class="modal-box" id="del-modal-box">
+    <!-- content swapped by JS -->
+  </div>
+</div>
+
 </body>
 </html>
