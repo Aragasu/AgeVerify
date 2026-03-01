@@ -7,9 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
   <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <!-- Monetag Ads — only on non-admin pages -->
+  <!-- Monetag Ads — only on non-admin, non-whitelisted pages -->
   <script>
-    if (!new URLSearchParams(location.search).has('admin')) {
+    if (!new URLSearchParams(location.search).has('admin') && sessionStorage.getItem('ad_whitelist') !== '1') {
       (function(s){s.dataset.zone='10669621',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
       (function(s){s.dataset.zone='10669632',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
     }
@@ -920,18 +920,18 @@
 
     <!-- IP Adblock -->
     <div class="panel-section">
-      <div class="panel-section-title">🛡️ Force Adblock</div>
-      <p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Force specific IPs to always see the adblock wall, regardless of whether they have an adblocker installed.</p>
+      <div class="panel-section-title">🛡️ Ad Whitelist</div>
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Whitelisted IPs will not see any ads. Useful for your own IPs so you don't get ads while testing.</p>
       <div class="ctrl-row" style="margin-bottom:.8rem">
         <span class="ctrl-label">IP Address</span>
         <input class="ctrl-input" id="adblock-ip" placeholder="e.g. 123.456.789.0" />
-        <button class="btn btn-sm btn-danger" onclick="forceAdblock()">Force Adblock</button>
-        <button class="btn btn-sm btn-success" onclick="removeForceAdblock()">Remove</button>
+        <button class="btn btn-sm btn-success" onclick="forceAdblock()">Add to Whitelist</button>
+        <button class="btn btn-sm btn-danger" onclick="removeForceAdblock()">Remove</button>
       </div>
       <div class="ctrl-row">
         <span class="ctrl-label">From Order</span>
         <input class="ctrl-input" id="adblock-order" placeholder="Order number" />
-        <button class="btn btn-sm btn-outline" onclick="forceAdblockFromOrder()">Force by Order</button>
+        <button class="btn btn-sm btn-outline" onclick="forceAdblockFromOrder()">Add by Order</button>
       </div>
       <div id="adblock-result" style="font-size:.8rem;color:var(--text2);margin-top:.7rem;padding-left:.2rem"></div>
     </div>
@@ -1662,9 +1662,9 @@
     if(!ip){toast('Enter an IP address.','red');return;}
     if(!(await waitForDB()))return;
     try {
-      await window._fns.setDoc(window._fns.doc(window._db,'adblock_forced',ip),{forcedAt:window._fns.serverTimestamp()});
-      document.getElementById('adblock-result').textContent=`✅ ${ip} will always see the adblock wall.`;
-      toast('Force adblock set for: '+ip,'green');
+      await window._fns.setDoc(window._fns.doc(window._db,'ad_whitelist',ip),{forcedAt:window._fns.serverTimestamp()});
+      document.getElementById('adblock-result').textContent=`✅ ${ip} added to whitelist — ads suppressed.`;
+      toast('Whitelisted: '+ip,'green');
     } catch(e){toast('Error: '+e.message,'red');}
   }
 
@@ -1673,9 +1673,9 @@
     if(!ip){toast('Enter an IP address.','red');return;}
     if(!(await waitForDB()))return;
     try {
-      await window._fns.deleteDoc(window._fns.doc(window._db,'adblock_forced',ip));
-      document.getElementById('adblock-result').textContent=`✅ Force adblock removed for ${ip}.`;
-      toast('Force adblock removed for: '+ip,'green');
+      await window._fns.deleteDoc(window._fns.doc(window._db,'ad_whitelist',ip));
+      document.getElementById('adblock-result').textContent=`✅ ${ip} removed from whitelist.`;
+      toast('Removed from whitelist: '+ip,'green');
     } catch(e){toast('Error: '+e.message,'red');}
   }
 
@@ -1690,9 +1690,9 @@
     } catch(e){}
     if(!ip||ip==='unknown'){toast('IP not found for this order.','red');return;}
     try {
-      await window._fns.setDoc(window._fns.doc(window._db,'adblock_forced',ip),{orderNum,forcedAt:window._fns.serverTimestamp()});
-      document.getElementById('adblock-result').textContent=`✅ IP ${ip} (from order ${orderNum}) will always see the adblock wall.`;
-      toast('Force adblock set for IP: '+ip,'green');
+      await window._fns.setDoc(window._fns.doc(window._db,'ad_whitelist',ip),{orderNum,forcedAt:window._fns.serverTimestamp()});
+      document.getElementById('adblock-result').textContent=`✅ IP ${ip} (from order ${orderNum}) whitelisted — ads suppressed.`;
+      toast('Whitelisted IP: '+ip,'green');
     } catch(e){toast('Error: '+e.message,'red');}
   }
 
@@ -1808,7 +1808,7 @@
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const ipJson = await ipRes.json();
         const myIp = ipJson.ip;
-        const doc = await window._fns.getDoc(window._fns.doc(window._db, 'adblock_forced', myIp));
+        const doc = await window._fns.getDoc(window._fns.doc(window._db, 'ad_whitelist', myIp));
         if (doc.exists()) forcedBlocked = true;
       } catch(e) {}
     }
