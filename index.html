@@ -7,10 +7,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
   <!-- EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <!-- Monetag Popunder -->
-  <script>(function(s){s.dataset.zone='10669621',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
-  <!-- Monetag Vignette Banner -->
-  <script>(function(s){s.dataset.zone='10669632',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+  <!-- Monetag Ads — only on non-admin pages -->
+  <script>
+    if (!new URLSearchParams(location.search).has('admin')) {
+      (function(s){s.dataset.zone='10669621',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+      (function(s){s.dataset.zone='10669632',s.src='https://gizokraijaw.net/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+    }
+  </script>
 
   <style>
     :root {
@@ -628,7 +631,7 @@
     <div class="grid-3">
       <div class="card"><div class="card-icon">✨</div><h3>New Account</h3><p>We create a brand-new Roblox account with the age estimation already completed and hand it over to you.</p></div>
       <div class="card"><div class="card-icon">🎂</div><h3>Age Groups</h3><p>Choose between 13–15 or 16–17 years. More groups coming soon. Pick the one that fits your needs.</p></div>
-      <div class="card"><div class="card-icon">💜</div><h3>Alternative Payment</h3><p>Since we're minors, we accept gift cards and digital items instead of real-money transactions.</p></div>
+      <div class="card"><div class="card-icon">📢</div><h3>100% Free</h3><p>No payments, no gift cards. You just watch a short ad — that's it. Ads keep this service running at no cost to you.</p></div>
     </div>
   </section>
 
@@ -637,8 +640,8 @@
     <h2 class="sec-title">How It Works</h2>
     <div class="steps">
       <div class="step"><div class="step-num">01</div><div><h3>Submit Your Order</h3><p>Enter your email, preferred usernames, and desired age group. We'll try your preferred username first, with two fallbacks.</p></div></div>
-      <div class="step"><div class="step-num">02</div><div><h3>Choose &amp; Send Payment</h3><p>Pick your preferred payment method and enter the gift card code or equivalent. We'll validate it on our end.</p></div></div>
-      <div class="step"><div class="step-num">03</div><div><h3>We Get to Work</h3><p>Once payment is confirmed we create and age-verify the account. We'll email you at every step of the way.</p></div></div>
+      <div class="step"><div class="step-num">02</div><div><h3>Watch a Short Ad</h3><p>We can't accept real payments since we're minors. Watching a short ad is all we ask — it keeps the service free and online for everyone.</p></div></div>
+      <div class="step"><div class="step-num">03</div><div><h3>We Get to Work</h3><p>Once your order is received we create and age-verify the account. We'll email you at every step of the way.</p></div></div>
       <div class="step"><div class="step-num">04</div><div><h3>Receive Your Account</h3><p>When done, you'll get the account credentials via email. Ready to use straight away.</p></div></div>
     </div>
   </section>
@@ -732,7 +735,7 @@
         </div>
 
         <div class="info-box" style="margin-bottom:1.4rem">
-          💜 <strong>Why no real payments?</strong> We're both minors and legally can't accept real-money transactions. Watching a short ad is our way of keeping this service running — thanks for understanding!
+          📢 <strong>We know ads are annoying</strong> — but this is the only way to give you a free service while keeping this website online. Domains and hosting aren't free, and since we're both minors we can't accept real payments. Watching a short ad is all we ask. Thanks for understanding!
         </div>
 
         <div class="ad-shell" id="ad-shell">
